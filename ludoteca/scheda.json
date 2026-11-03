@@ -3,7 +3,11 @@
   "sottotitolo": "l'ippodromo di Natale",
   "descrizione": "Corse e scommesse ispirate al film: otto cavalli, talloncini segreti e i TOKEN che cambiano la corsa. L'iPad collegato alla TV mostra l'ippodromo in 3D con le miniature animate e il cronista (Stefano) che commenta con la voce; gli ospiti entrano inquadrando un QR code, tirano il dado e scelgono il cavallo dal telefono. Il giocatore di turno lo estrae la sorte, ogni tanto c'è la corsa al dado e alla fine il telefono di chi vince annuncia il premio.",
   "online": true,
-  "sezione": "originali",
+  "sezione": "originale",
   "ordine": 198,
-  "generi": ["Corse", "Scommesse", "Famiglia", "Party"]
+  "generi": [
+    "Sport e corse",
+    "Famiglia",
+    "Party"
+  ]
 }
