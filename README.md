@@ -3,7 +3,8 @@
 Versione digitale del gioco di corse e scommesse ispirato al film, pensata per la serata in famiglia:
 
 - **la TV** (un iPad o un computer collegato al televisore) mostra l'ippodromo in 3D: la pista ovale a caselle
-  come i pezzi stampati, gli otto cavalli animati con il nome sopra, i token, la tribuna e il **cronista**
+  come i pezzi stampati, gli otto cavalli animati con il nome sopra (King, Soldatino, Dartagnan, Apocalisse,
+  Can Can, Piripicchio, 'O Sole Mio, Uragano), i token, la tribuna e il **cronista**
   (l'avatar di Stefano) che commenta con il fumetto e con la voce;
 - **ogni giocatore** inquadra il QR code con il telefono, scrive il nome ed è dentro: sceglie la pila di
   talloncini, tira il dado e sceglie cavallo, direzione e casella. Sul telefono si possono toccare **solo
@@ -52,7 +53,7 @@ I telefoni aprono `telefono.html` dal QR code, oppure scrivono il codice di 4 le
 | Pennichella | 2 | disattiva un cavallo a scelta |
 | Retromarcia | 2 | il cavallo torna dov'era |
 | Salta il turno | 1 | il prossimo giocatore estratto salta il turno |
-| Azzoppato | 1 | il cavallo esce dalla pista e rientra al turno dopo, Disattivo |
+| Azzoppato | 1 | il cavallo esce dalla pista per tutto il turno in corso; al turno dopo (quando i cavalli si rialzano) rientra, ma Disattivo |
 | Spazzata (!) | 1 | tornano nel sacchetto lei e tutti i token dietro l'ultimo cavallo |
 | Nuovo giro (?) | 2 | tutti i cavalli tornano Attivi, si apre un nuovo giro e a fine turno c'è la corsa al dado per tutti i giocatori |
 
@@ -63,7 +64,7 @@ qui sopra) e **Effetto multiplo** attiva la versione cattiva: se un token porta 
 altro token, scatta anche quello, e così via; ogni token vale una volta sola per catena, così non si gira all'infinito.
 Sulla TV i token stanno sul prato, fuori dal bordo esterno, all'altezza della loro colonna (colorata d'azzurro).
 I cavalli Disattivi diventano grigi; il cavallo azzoppato si accascia a lato della pista col muso a terra e
-rientra Disattivo al turno successivo. Nella sala d'attesa si sceglie anche la velocità: lenta, normale, veloce.
+rientra Disattivo al turno successivo dei cavalli. Nella sala d'attesa si sceglie anche la velocità: lenta, normale, veloce.
 
 **Scelte fatte dove il regolamento non lo dice** (si cambiano facilmente in `scripts/dati.gd`):
 - le quantità dei token sono quelle della tabella qui sopra;

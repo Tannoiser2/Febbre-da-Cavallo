@@ -43,7 +43,7 @@ await tv.evaluate(async () => {
   const R = window.R, RAD = window.RADICE;
   const g = await R.get(RAD + '/PROV/giocatori');
   const uids = Object.keys(g);
-  const nomiC = ['Saetta', 'Ciambella', 'Tornado', 'Trottolino', 'Mandrakino', 'Polpetta', 'Caramella', 'Nerone'];
+  const nomiC = ['King', 'Soldatino', 'Dartagnan', 'Apocalisse', 'Can Can', 'Piripicchio', "'O Sole Mio", 'Uragano'];
   const colori = ['#d62828', '#f2c200', '#1f5fd6', '#2a9d3f', '#8e44ad', '#f77f00', '#ff5fa2', '#2b2b2b'];
   const cav = nomiC.map((n, i) => ({ id: i, nome: n, col: colori[i], attivo: true, zoppo: false, p: i / 8, stato: 'pronto' }));
   const ris = [
@@ -51,9 +51,9 @@ await tv.evaluate(async () => {
     { uid: uids[1], nome: g[uids[1]].nome, quote: 0, premio: 0, talloncini: [] },
   ];
   const S = { fase: 'fine', corsa: 1, giocatori: uids.map((u, i) => ({ uid: u, nome: g[u].nome, saldo: i ? -15 : -7 })),
-    cavalli: cav, vincitore: 2, risultati: ris, cfg: { posta: 15 }, frase: 'Ha vinto Tornado! Che corsa, signori!', domanda: {} };
-  const tal = [{ c: 2, nome: 'Tornado', col: colori[2], q: 3 }, { c: 2, nome: 'Tornado', col: colori[2], q: 1 },
-    { c: 5, nome: 'Polpetta', col: colori[5], q: 2 }, { c: 0, nome: 'Saetta', col: colori[0], q: 4 }, { c: 7, nome: 'Nerone', col: colori[7], q: 5 }];
+    cavalli: cav, vincitore: 2, risultati: ris, cfg: { posta: 15 }, frase: 'Ha vinto Dartagnan! Che corsa, signori!', domanda: {} };
+  const tal = [{ c: 2, nome: 'Dartagnan', col: colori[2], q: 3 }, { c: 2, nome: 'Dartagnan', col: colori[2], q: 1 },
+    { c: 5, nome: 'Piripicchio', col: colori[5], q: 2 }, { c: 0, nome: 'King', col: colori[0], q: 4 }, { c: 7, nome: 'Uragano', col: colori[7], q: 5 }];
   for (const u of uids) await R.set(RAD + '/PROV/segreti/' + u, JSON.stringify({ pila: 0, lettera: 'A', talloncini: tal }));
   await R.set(RAD + '/PROV/stato', JSON.stringify(S));
 });

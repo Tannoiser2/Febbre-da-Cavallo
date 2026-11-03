@@ -3,14 +3,14 @@ extends RefCounted
 ## Dati fissi del gioco: cavalli, token, dado, frasi del cronista.
 
 const CAVALLI := [
-	{"nome": "Saetta", "colore": "#d62828"},
-	{"nome": "Ciambella", "colore": "#f2c200"},
-	{"nome": "Tornado", "colore": "#1f5fd6"},
-	{"nome": "Trottolino", "colore": "#2a9d3f"},
-	{"nome": "Mandrakino", "colore": "#8e44ad"},
-	{"nome": "Polpetta", "colore": "#f77f00"},
-	{"nome": "Caramella", "colore": "#ff5fa2"},
-	{"nome": "Nerone", "colore": "#2b2b2b"},
+	{"nome": "King", "colore": "#d62828"},
+	{"nome": "Soldatino", "colore": "#f2c200"},
+	{"nome": "Dartagnan", "colore": "#1f5fd6"},
+	{"nome": "Apocalisse", "colore": "#2a9d3f"},
+	{"nome": "Can Can", "colore": "#8e44ad"},
+	{"nome": "Piripicchio", "colore": "#f77f00"},
+	{"nome": "'O Sole Mio", "colore": "#ff5fa2"},
+	{"nome": "Uragano", "colore": "#2b2b2b"},
 ]
 
 ## Facce del dado movimento: n = caselle, v = pallino verde (si pesca un TOKEN),
@@ -40,7 +40,7 @@ const TOKEN := {
 	"disattiva": {"n": 2, "nome": "Pennichella", "testo": "Disattiva un cavallo a scelta."},
 	"indietro": {"n": 2, "nome": "Retromarcia", "testo": "Il cavallo torna dov'era."},
 	"salta": {"n": 1, "nome": "Salta il turno", "testo": "Il prossimo giocatore salta il turno."},
-	"azzoppato": {"n": 1, "nome": "Azzoppato", "testo": "Il cavallo esce dalla pista per un turno."},
+	"azzoppato": {"n": 1, "nome": "Azzoppato", "testo": "Il cavallo esce dalla pista fino al turno dopo, quando rientra Disattivato."},
 	"allarme": {"n": 1, "nome": "Spazzata", "testo": "Via tutti i token dietro l'ultimo cavallo."},
 	"sorpresa": {"n": 2, "nome": "Nuovo giro", "testo": "Tutti i cavalli si rialzano e c'è la corsa al dado per tutti!"},
 }
@@ -125,7 +125,7 @@ const FRASI := {
 		"Niente da fare per {g}, salta il giro.",
 	],
 	"azzoppato": [
-		"Povero {c}, si è azzoppato! Fuori per un turno.",
+		"Povero {c}, si è azzoppato! Resta fuori per tutto questo turno.",
 	],
 	"rientra": [
 		"{c} rientra in pista, un po' acciaccato.",

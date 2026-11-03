@@ -237,23 +237,25 @@ func _linea_arrivo(r_in: float, r_out: float) -> void:
 		_mondo_pista.add_child(palo)
 	var trave := MeshInstance3D.new()
 	var bm := BoxMesh.new()
-	bm.size = Vector3(0.35, 1.5, r_out - r_in + 2.6)
+	bm.size = Vector3(0.35, 1.9, r_out - r_in + 2.6)
 	trave.mesh = bm
 	trave.material_override = rosso
 	trave.position = Vector3(x, 7.0, (r_in + r_out) / 2.0)
 	_mondo_pista.add_child(trave)
-	var scritta := Label3D.new()
-	scritta.text = "ARRIVO"
-	scritta.font = font
-	scritta.font_size = 110
-	scritta.pixel_size = 0.012
-	scritta.modulate = Color("#ffd23f")
-	scritta.outline_size = 16
-	scritta.outline_modulate = Color("#5a0a0a")
-	scritta.position = Vector3(x, 8.6, (r_in + r_out) / 2.0)
-	scritta.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
-	scritta.no_depth_test = true
-	_mondo_pista.add_child(scritta)
+	# la scritta sta sullo striscione, sui due lati
+	for lato in [-1.0, 1.0]:
+		var scritta := Label3D.new()
+		scritta.text = "ARRIVO"
+		scritta.font = font
+		scritta.font_size = 150
+		scritta.pixel_size = 0.012
+		scritta.modulate = Color("#ffd23f")
+		scritta.outline_size = 14
+		scritta.outline_modulate = Color("#5a0a0a")
+		scritta.position = Vector3(x + lato * 0.19, 7.0, (r_in + r_out) / 2.0)
+		scritta.rotation_degrees.y = 90.0 * lato
+		scritta.double_sided = false
+		_mondo_pista.add_child(scritta)
 
 func _steccato(r: float, esterno: bool) -> void:
 	var bianco := _mat(Color("#f7f7f2"), 0.6)

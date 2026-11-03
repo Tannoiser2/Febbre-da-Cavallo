@@ -172,7 +172,6 @@ func in_pista(c: Dictionary) -> bool:
 
 func gioca_turno() -> void:
 	n_turno += 1
-	await _rientro_zoppi()
 	if _corsa_al_dado_ora():
 		await corsa_al_dado()
 	else:
@@ -334,12 +333,23 @@ func _controlla_ripristino() -> void:
 	for c in cavalli:
 		if c["attivo"] and not c["zoppo"]:
 			return
+	await nuovo_turno_cavalli()
+	await v.dici(Dati.frase("ripristino"), "festeggia")
+
+## Nuovo turno dei cavalli (tutti Disattivi, oppure il "?"): tutti tornano Attivi, tranne
+## l'azzoppato, che rientra in pista ma Disattivato.
+func nuovo_turno_cavalli() -> void:
+	var zoppi := []
 	for c in cavalli:
-		if not c["zoppo"]:
+		if c["zoppo"]:
+			zoppi.append(c["id"])
+		else:
 			c["attivo"] = true
+	await _rientro_zoppi()
+	for z in zoppi:
+		cavalli[z]["attivo"] = false
 	cambiato.emit()
 	await v.aggiorna()
-	await v.dici(Dati.frase("ripristino"), "festeggia")
 
 ## Sposta un cavallo (animazione compresa). dest può essere Pista.TRAGUARDO.
 func muovi(cid: int, da: int, dest: int, d: Dictionary, avanti: bool) -> void:
@@ -569,9 +579,7 @@ func applica(uid: String, cid: int, tipo: String, origine: int, prof: int, cella
 			await _catena(uid, cid, da, prof, visti)
 		"sorpresa":
 			# il punto interrogativo: nuovo giro, tutti i cavalli Attivi e corsa al dado per tutti
-			for x in cavalli:
-				if not x["zoppo"]:
-					x["attivo"] = true
+			await nuovo_turno_cavalli()
 			giro = []
 			corsa_per_tutti = true
 			cambiato.emit()
