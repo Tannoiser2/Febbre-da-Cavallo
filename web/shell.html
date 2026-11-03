@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#7a1016">
+<title>Febbre da Cavallo - l'ippodromo di Natale</title>
+<link rel="icon" href="img/token/piu1.webp">
+<style>
+@font-face { font-family: 'Bangers'; src: url('font/Bangers-Regular.ttf'); }
+@font-face { font-family: 'Barlow'; src: url('font/BarlowCondensed-Bold.ttf'); }
+html, body, #canvas { margin: 0; padding: 0; border: 0; }
+body { color: #2a1608; background: #1d4d2a; overflow: hidden; touch-action: none; font-family: 'Barlow', sans-serif; }
+#canvas { display: block; width: 100vw; height: 100vh; }
+#canvas:focus { outline: none; }
+#avvio { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+  background: radial-gradient(circle at 50% 35%, #2f7a43, #123a1f 75%); z-index: 10; text-align: center; padding: 20px; }
+#avvio img { width: min(780px, 90vw); filter: drop-shadow(0 8px 10px rgba(0,0,0,.45)); }
+#avvio .box { background: #fff4d6; border: 6px solid #b8202a; border-radius: 26px; padding: 22px 34px; max-width: 640px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+#avvio p { font-size: 24px; margin: 8px 0; }
+#avvio button { font-family: 'Bangers', sans-serif; font-size: 46px; color: #fff; background: #1d7a3a; border: 5px solid #0d4a20;
+  border-radius: 18px; padding: 10px 40px; cursor: pointer; letter-spacing: 1px; }
+#avvio button:active { transform: scale(.97); }
+#avvio .piccolo { font-size: 19px; color: #6b4a2a; }
+#avvio a { color: #b8202a; }
+#stato { color: #fff4d6; font-size: 22px; min-height: 30px; }
+#stato progress { width: 360px; height: 18px; }
+</style>
+$GODOT_HEAD_INCLUDE
+</head>
+<body>
+<canvas id="canvas">Il tuo browser non supporta i canvas.</canvas>
+<div id="avvio">
+  <img src="img/titolo.webp" alt="Febbre da Cavallo">
+  <div class="box">
+    <p>Questa è la <b>TV dell'ippodromo</b>: collegala al televisore e alza il volume.</p>
+    <button id="apri">APRI L'IPPODROMO</button>
+    <p class="piccolo">I giocatori useranno il telefono: inquadreranno il codice che compare sulla TV.<br>
+    Sei un giocatore? <a href="telefono.html">Entra dal telefono</a></p>
+  </div>
+  <div id="stato"></div>
+</div>
+<script src="js/vendor/qrcode.js"></script>
+<script src="$GODOT_URL"></script>
+<script type="module">
+import './js/ponte.js';
+import { sbloccaAudio, sbloccaVoce } from './js/suoni.js';
+
+const GODOT_CONFIG = $GODOT_CONFIG;
+const engine = new Engine(GODOT_CONFIG);
+const stato = document.getElementById('stato');
+const q = new URLSearchParams(location.search);
+
+async function schermoAcceso() {
+  try { if ('wakeLock' in navigator) await navigator.wakeLock.request('screen'); } catch (e) { /* ok */ }
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible') { try { await navigator.wakeLock.request('screen'); } catch (e) { /* ok */ } }
+  });
+}
+
+let partito = false;
+async function parti() {
+  if (partito) return;
+  partito = true;
+  sbloccaAudio(); sbloccaVoce(); schermoAcceso();
+  if (!q.has('noschermo')) {
+    const d = document.documentElement;
+    try { await (d.requestFullscreen || d.webkitRequestFullscreen)?.call(d); } catch (e) { /* ok */ }
+  }
+  const missing = Engine.getMissingFeatures({ threads: false });
+  if (missing.length) {
+    stato.textContent = 'Questo browser non riesce ad aprire il gioco: ' + missing.join(', ');
+    return;
+  }
+  stato.innerHTML = 'Preparo la pista... <progress id="pr"></progress>';
+  const pr = document.getElementById('pr');
+  try {
+    await engine.startGame({
+      onProgress(cur, tot) { if (cur > 0 && tot > 0) { pr.value = cur; pr.max = tot; } },
+    });
+    document.getElementById('avvio').remove();
+  } catch (e) {
+    console.error(e);
+    stato.textContent = 'Errore: ' + (e?.message || e);
+  }
+}
+document.getElementById('apri').addEventListener('click', parti);
+if (q.has('auto') || q.has('subito')) parti();
+</script>
+</body>
+</html>

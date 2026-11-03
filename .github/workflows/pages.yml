@@ -1,0 +1,64 @@
+# Costruisce la versione web (TV con Godot + pagina dei telefoni) e la pubblica su GitHub Pages
+# (e, se ci sono i segreti, sulla ludoteca privata di Cloudflare).
+# Non parte a ogni modifica: si avvia a mano (Actions → Pubblica → Run workflow)
+# oppure con un commit che nel messaggio contiene [pubblica].
+name: Pubblica
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[pubblica]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scarica Godot 4.7 e il modello di esportazione web
+        run: |
+          V=4.7.2-stable
+          wget -q https://github.com/godotengine/godot/releases/download/$V/Godot_v${V}_linux.x86_64.zip
+          unzip -q Godot_v${V}_linux.x86_64.zip
+          mv Godot_v${V}_linux.x86_64 godot
+          wget -q https://github.com/godotengine/godot/releases/download/$V/Godot_v${V}_export_templates.tpz
+          T=~/.local/share/godot/export_templates/4.7.2.stable
+          mkdir -p $T
+          unzip -q -j Godot_v${V}_export_templates.tpz templates/web_nothreads_release.zip -d $T
+          cp $T/web_nothreads_release.zip $T/web_nothreads_debug.zip
+
+      - name: Esporta la TV e copia la pagina dei telefoni
+        run: tools/costruisci_web.sh ./godot
+
+      - name: Pubblica su Cloudflare (ludoteca privata)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          LUDOTECA_DOMINIO: ludoteca-digitale.com
+        run: python3 tools/pubblica_cloudflare.py build/web febbre-da-cavallo febbredacavallo
+
+      - uses: actions/upload-pages-artifact@v3
+        if: ${{ !github.event.repository.private }}
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
