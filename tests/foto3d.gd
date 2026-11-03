@@ -16,6 +16,8 @@ func _init() -> void:
 		m.cavalli[i]["cella"] = celle[i]
 		m.cavalli[i]["attivo"] = i % 3 != 0
 	m.token = {10: "piu2", 16: "azzoppato", 28: "supera", 40: "allarme"}
+	m.cavalli[3]["zoppo"] = true
+	m.cavalli[3]["cella_zoppo"] = 13
 	ip.sincronizza(m)
 	ip.cavalli[2].galoppa(true)
 	ip.mostra_marcatori([{"t": "1", "cella": 2}, {"t": "2", "cella": 5}])

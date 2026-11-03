@@ -30,6 +30,7 @@ var vincitore := -1
 var n_corsa := 0
 var n_turno := 0
 var salta_prossimo := false
+var in_corsa_dado := false
 var giro := []              # chi ha già giocato in questo giro (si ricomincia quando hanno giocato tutti)
 var ultimo_uid := ""
 var di_turno := ""          # uid di chi sta giocando ora
@@ -216,6 +217,7 @@ func corsa_al_dado() -> void:
 	for i in k:
 		scelti.append(estrai_giocatore(scelti, true))
 	dado_attuale = facce
+	in_corsa_dado = true
 	cambiato.emit()
 	await v.dici(Dati.frase("corsa_dado"), "sorpreso")
 	await v.dado(facce)
@@ -240,18 +242,21 @@ func corsa_al_dado() -> void:
 			ordine.append([liberi[0], facce[i]])
 			await v.dado_preso(i, liberi[0])
 			break
+	# si gioca dal più lento al più veloce: chi ha preso per primo gioca per ultimo
+	ordine.reverse()
+	await v.dici("Ora tutti giocano il loro dado: dal più lento al più veloce!", "parla")
 	for p in ordine:
 		if vincitore >= 0:
 			break
 		var uid: String = p[0]
 		di_turno = uid
 		trova(uid)["turni"] += 1
-		ultimo_uid = uid
 		dado_attuale = [p[1]]
 		cambiato.emit()
-		await v.dici(Dati.frase("turno", {"g": nome_g(uid)}), "indica")
-		await v.dado([p[1]])
+		await v.dado_corsa_turno(uid)
+		await v.dici("Tocca a %s con il suo %s!" % [nome_g(uid), Dati.testo_faccia(p[1])], "indica")
 		await esegui_mossa(uid, p[1])
+	in_corsa_dado = false
 
 ## Le mosse possibili per un cavallo con n passi: {"avanti": dest, "indietro": dest}.
 ## Indietro solo se la faccia del dado è "+N -N".
@@ -388,6 +393,13 @@ func chiedi_casella(uid: String, titolo: String, scelte: Array, rispetto: int, e
 		var s: String = pista.nome_corsia(pista.celle[c]["corsia"])
 		if rispetto >= 0 and pista.adiacenti[rispetto].has(c):
 			s = pista.descrivi_vicina(rispetto, c)
+		if extra.get("scopo", "") == "sposta_token":
+			var ds: float = pista.progresso(c) - pista.progresso(rispetto)
+			if ds > pista.lunghezza / 2.0:
+				ds -= pista.lunghezza
+			elif ds < -pista.lunghezza / 2.0:
+				ds += pista.lunghezza
+			s = "una colonna avanti" if ds > 0 else "una colonna indietro"
 		op.append({"k": c, "t": str(i + 1), "s": s, "ok": true, "cella": c})
 	var r: Dictionary = await _chiedi([uid], "casella", titolo, op, extra)
 	return int(r["k"])
@@ -399,6 +411,32 @@ func token_nella_colonna(cella: int, ignora := -99) -> int:
 		if c != ignora and token.has(c):
 			return c
 	return -1
+
+## Dove si può spostare un token già in pista: la colonna subito avanti o subito dietro (se libere).
+## Si resta nella stessa corsia quando si può.
+func _vicine_per_token(tc: int) -> Array:
+	var avanti := -1
+	var dietro := -1
+	var s0: float = pista.celle[tc]["s"]
+	for a in pista.adiacenti[tc]:
+		if pista.colonna[tc].has(a) or token_nella_colonna(a, tc) >= 0:
+			continue
+		var ds: float = pista.celle[a]["s"] - s0
+		if ds > pista.lunghezza / 2.0:
+			ds -= pista.lunghezza
+		elif ds < -pista.lunghezza / 2.0:
+			ds += pista.lunghezza
+		var stessa: bool = pista.celle[a]["corsia"] == pista.celle[tc]["corsia"]
+		if ds > 0 and (avanti < 0 or stessa):
+			avanti = a
+		elif ds < 0 and (dietro < 0 or stessa):
+			dietro = a
+	var l := []
+	if avanti >= 0:
+		l.append(avanti)
+	if dietro >= 0:
+		l.append(dietro)
+	return l
 
 func risolvi_casella(uid: String, cid: int, verde: bool, origine: int, prof: int) -> void:
 	var cella: int = cavalli[cid]["cella"]
@@ -438,10 +476,7 @@ func risolvi_casella(uid: String, cid: int, verde: bool, origine: int, prof: int
 			sacchetto.shuffle()
 			await v.token_via([tc])
 		else:
-			var libere := []
-			for a in pista.adiacenti[tc]:
-				if token_nella_colonna(a, tc) < 0 and not pista.colonna[tc].has(a):
-					libere.append(a)
+			var libere := _vicine_per_token(tc)
 			token.erase(tc)
 			in_mano = 1
 			if libere.is_empty():

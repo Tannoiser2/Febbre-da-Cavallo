@@ -10,6 +10,7 @@ func estrazione(_uid: String) -> void: pass
 func estrazione_multipla(_uids: Array) -> void: pass
 func dado(_facce: Array) -> void: pass
 func dado_preso(_i: int, _uid: String) -> void: pass
+func dado_corsa_turno(_uid: String) -> void: pass
 func muovi(_cid: int, _perc: Array, _da: int) -> void: pass
 func token_rivela(_tipo: String, _cella: int, _esistente: bool) -> void: pass
 func token_via(_celle: Array) -> void: pass

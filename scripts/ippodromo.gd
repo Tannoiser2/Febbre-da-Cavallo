@@ -427,6 +427,12 @@ func _alberi(_r_in: float, r_out: float) -> void:
 		_albero(Vector3(s * (pista.lato / 2.0 + r_out + 8.0), 0, 4), 1.6)
 
 # ------------------------------------------------------------------ posizioni
+## I token stanno fuori dalla pista, sul prato accanto al bordo esterno, all'altezza della loro colonna
+func pos_token(id: int) -> Vector3:
+	var r := Pista.R0 + Pista.CORSIE * Pista.LARG_CORSIA + Pista.BORDO + 1.55
+	var p := pista.punto(pista.celle[id]["s"], r)
+	return Vector3(p.x, 0.02, p.y)
+
 func pos_cella(id: int) -> Vector3:
 	var c: Vector2 = pista.celle[id]["centro"]
 	return Vector3(c.x, 0.04, c.y)
@@ -435,7 +441,7 @@ func pos_cella(id: int) -> Vector3:
 func pos_partenza(cid: int) -> Vector3:
 	var r_out := Pista.R0 + Pista.CORSIE * Pista.LARG_CORSIA + Pista.BORDO
 	var x := -pista.lato / 2.0 + 1.6 + cid * 3.1
-	return Vector3(x, 0.04, r_out + (1.9 if cid % 2 == 0 else 4.0))
+	return Vector3(x, 0.04, r_out + (4.4 if cid % 2 == 0 else 6.6))
 
 func pos_cavallo(cid: int, cella: int) -> Vector3:
 	if cella == Pista.PARTENZA:
@@ -509,11 +515,11 @@ func disegna_colonne(celle_token: Array) -> void:
 
 func _metti_zoppo(h: Cavallo3D, cella: int) -> void:
 	var c: Dictionary = pista.celle[cella]
-	var r_out := Pista.R0 + Pista.CORSIE * Pista.LARG_CORSIA + 1.6
-	var p := pista.punto(c["s"], r_out)
+	# a lato della casella, fuori pista (sul bordo interno, così non copre i token che stanno fuori)
+	var p := pista.punto(c["s"], Pista.R0 - Pista.BORDO - 1.2)
 	h.position = Vector3(p.x, 0.04, p.y)
-	h.basis = _base_dir(c["dir"]).rotated(Vector3.UP, PI / 2.0)
-	h.modello.rotation = Vector3(0, 0, 0.35)
+	h.basis = _base_dir(c["dir"])
+	h.modello.rotation = Vector3.ZERO
 
 # ------------------------------------------------------------------ animazioni
 func _punti_percorso(cid: int, perc: Array, da: int) -> Array:
@@ -592,12 +598,115 @@ func anima_zoppo(cid: int, cella: int, fuori: bool) -> void:
 	var h: Cavallo3D = cavalli[cid]
 	if fuori:
 		var tw := create_tween()
-		tw.tween_property(h.modello, "rotation:z", 1.2, 0.25)
-		tw.tween_property(h.modello, "rotation:z", 0.0, 0.25)
+		tw.tween_property(h.modello, "rotation:z", 0.5, 0.15)
+		tw.tween_property(h.modello, "rotation:z", -0.5, 0.15)
+		tw.tween_property(h.modello, "rotation:z", 0.0, 0.15)
 		await tw.finished
+		h.imposta(false, true)
 		_metti_zoppo(h, cella)
 	else:
 		h.modello.rotation = Vector3.ZERO
+
+# ------------------------------------------------------------------ dado 3D
+const LATO_DADO := 3.6
+const NORMALI_DADO := [Vector3.UP, Vector3.DOWN, Vector3.RIGHT, Vector3.LEFT, Vector3.BACK, Vector3.FORWARD]
+
+## Un dado con le sei facce di Dati.DADO (la faccia i sta sulla normale NORMALI_DADO[i])
+func _nodo_dado() -> Node3D:
+	var d := Node3D.new()
+	var cubo := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3.ONE * LATO_DADO
+	cubo.mesh = bm
+	cubo.material_override = _mat(Color("#f6efdc"), 0.45)
+	d.add_child(cubo)
+	var mezzo := LATO_DADO / 2.0 + 0.01
+	for i in 6:
+		var f: Dictionary = Dati.DADO[i]
+		var n: Vector3 = NORMALI_DADO[i]
+		var su := Vector3.FORWARD if absf(n.y) > 0.5 else Vector3.UP
+		var faccia := Node3D.new()
+		faccia.basis = Basis.looking_at(-n, su)
+		faccia.position = n * mezzo
+		d.add_child(faccia)
+		var l := Label3D.new()
+		l.text = ("+%d\n-%d" % [f["n"], f["n"]]) if f.get("e", false) else ("+%d" % f["n"])
+		l.font = font
+		l.font_size = 120 if not f.get("e", false) else 80
+		l.line_spacing = -18
+		l.pixel_size = 0.017
+		l.modulate = Color("#2a1608")
+		l.outline_size = 0
+		l.double_sided = false
+		faccia.add_child(l)
+		if f.get("v", false):
+			var pv := MeshInstance3D.new()
+			var cm := CylinderMesh.new()
+			cm.top_radius = 0.36
+			cm.bottom_radius = 0.36
+			cm.height = 0.04
+			pv.mesh = cm
+			var mv := _mat(Color("#22b04a"), 0.4)
+			pv.material_override = mv
+			pv.rotation_degrees.x = 90
+			pv.position = Vector3(1.15, 1.15, 0.0)
+			faccia.add_child(pv)
+	return d
+
+## Tira i dadi davvero: rotolano sulla pista e si fermano con la faccia giusta in alto
+func lancia_dadi(facce: Array, suono: Callable, velocita := 1.0) -> Array:
+	var dadi := []
+	var arrivi := []
+	var n := facce.size()
+	for k in n:
+		var d := _nodo_dado()
+		add_child(d)
+		var centro := _cam_target + Vector3((k - (n - 1) / 2.0) * 5.6, 0, 4.0)
+		var inizio := centro + Vector3(randf_range(-8, 8), 9.0, 16.0)
+		d.position = inizio
+		d.rotation = Vector3(randf() * TAU, randf() * TAU, randf() * TAU)
+		var idx := Dati.DADO.find(facce[k])
+		if idx < 0:
+			idx = 0
+		var finale := Basis(Quaternion(Vector3.UP, randf() * TAU)) * Basis(Quaternion(NORMALI_DADO[idx], Vector3.UP))
+		dadi.append({"n": d, "da": inizio, "a": centro + Vector3(0, LATO_DADO / 2.0, 0), "fin": finale,
+			"w": Vector3(randf_range(6, 11), randf_range(-4, 4), randf_range(6, 11)), "rimbalzo": -1})
+		arrivi.append(centro)
+	var durata := 1.7 / clampf(velocita, 0.5, 3.0)
+	var t := 0.0
+	while t < durata:
+		var dt := get_process_delta_time()
+		t += dt
+		var u := minf(t / durata, 1.0)
+		for x in dadi:
+			var d: Node3D = x["n"]
+			var e := 1.0 - pow(1.0 - u, 2.0)
+			var pos: Vector3 = x["da"].lerp(x["a"], e)
+			var rimb := int(u * 3.0)
+			pos.y = x["a"].y + absf(sin(u * PI * 3.0)) * 7.0 * pow(1.0 - u, 2.0) + (1.0 - u) * 0.0
+			d.position = pos
+			if rimb != x["rimbalzo"]:
+				x["rimbalzo"] = rimb
+				suono.call()
+			if u < 0.72:
+				var w: Vector3 = x["w"] * (1.0 - u)
+				d.basis = (Basis(Vector3.RIGHT, w.x * dt) * Basis(Vector3.UP, w.y * dt) * Basis(Vector3.BACK, w.z * dt) * d.basis).orthonormalized()
+			else:
+				d.basis = d.basis.slerp(x["fin"], minf(1.0, dt * 9.0)).orthonormalized()
+		await get_tree().process_frame
+	var nodi := []
+	for x in dadi:
+		x["n"].basis = x["fin"]
+		x["n"].position = x["a"]
+		nodi.append(x["n"])
+	return nodi
+
+func togli_dadi_3d(nodi: Array) -> void:
+	for d in nodi:
+		if is_instance_valid(d):
+			var tw := create_tween()
+			tw.tween_property(d, "scale", Vector3.ONE * 0.01, 0.3)
+			tw.tween_callback(d.queue_free)
 
 # ------------------------------------------------------------------ token
 func _nodo_token(tipo: String) -> Node3D:
@@ -630,7 +739,7 @@ func _nodo_token(tipo: String) -> Node3D:
 func metti_token(cella: int, tipo: String) -> Node3D:
 	var n := _nodo_token(tipo)
 	add_child(n)
-	n.position = pos_cella(cella) + Vector3(0, 0.0, 0)
+	n.position = pos_token(cella)
 	token_nodi[cella] = n
 	return n
 
@@ -642,7 +751,7 @@ func anima_token_rivela(tipo: String, cella: int, esistente: bool) -> void:
 		if token_nodi.has(cella):
 			token_nodi[cella].queue_free()
 		n = metti_token(cella, tipo)
-	var base := pos_cella(cella)
+	var base := pos_token(cella)
 	var tw := create_tween()
 	tw.tween_property(n, "position", base + Vector3(0, 5.5, 0), 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.parallel().tween_property(n, "scale", Vector3.ONE * 2.2, 0.45)
@@ -659,12 +768,12 @@ func anima_token_sposta(da: int, a: int, tipo: String) -> void:
 	if n == null:
 		n = _nodo_token(tipo)
 		add_child(n)
-		n.position = pos_cella(da)
+		n.position = pos_token(da)
 	token_nodi[a] = n
 	var tw := create_tween()
-	var mid := (pos_cella(da) + pos_cella(a)) / 2.0 + Vector3(0, 2.5, 0)
+	var mid := (pos_token(da) + pos_token(a)) / 2.0 + Vector3(0, 2.5, 0)
 	tw.tween_property(n, "position", mid, 0.3)
-	tw.tween_property(n, "position", pos_cella(a), 0.3).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(n, "position", pos_token(a), 0.3).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 	await tw.finished
 
 func anima_token_via(celle: Array) -> void:

@@ -68,6 +68,10 @@ func voce(si: bool) -> void:
 	if fr:
 		fr.voce(si)
 
+func velocita_voce(x: float) -> void:
+	if fr:
+		fr.velocitaVoce(x)
+
 func schermo_intero() -> void:
 	if fr:
 		fr.schermoIntero()

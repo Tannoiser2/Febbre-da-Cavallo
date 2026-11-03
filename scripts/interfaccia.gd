@@ -22,6 +22,9 @@ var banner: PanelContainer
 var banner_titolo: Label
 var banner_sotto: Label
 var dadi_box: HBoxContainer
+var presi_box: HBoxContainer      # corsa al dado: i dadi già presi, con il nome di chi li ha presi
+var _dadi_ws := []
+var _presi_nome := {}
 var classifica: VBoxContainer
 var righe_cavalli := []
 var lista_giocatori: VBoxContainer
@@ -45,6 +48,7 @@ var pile_celle := []
 var finale: Control
 var _pose_tween: Tween
 var titolo_img: TextureRect
+var velocita := 1.0
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -254,6 +258,11 @@ func _crea_banner() -> void:
 	dadi_box.add_theme_constant_override("separation", 30)
 	dadi_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dadi_box)
+	presi_box = HBoxContainer.new()
+	presi_box.position = Vector2(0, 400)
+	presi_box.add_theme_constant_override("separation", 30)
+	presi_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(presi_box)
 
 func mostra_banner(titolo: String, sotto := "") -> void:
 	banner.visible = titolo != ""
@@ -282,7 +291,7 @@ func roulette(nomi: Array, scelto: String, suono: Callable) -> void:
 		banner.reset_size()
 		banner.position.x = size.x / 2.0 - banner.size.x / 2.0 - 120
 		suono.call()
-		await get_tree().create_timer(0.04 + 0.012 * i * i / 4.0).timeout
+		await get_tree().create_timer((0.04 + 0.012 * i * i / 4.0) / velocita).timeout
 	banner_titolo.text = "TOCCA A " + scelto.to_upper()
 	banner.reset_size()
 	banner.position.x = size.x / 2.0 - banner.size.x / 2.0 - 120
@@ -339,9 +348,9 @@ func _testo_dado(l: Label, f: Dictionary) -> void:
 		l.text = "+%d" % f["n"]
 		l.add_theme_font_size_override("font_size", 84)
 
-func mostra_dadi(facce: Array, suono: Callable) -> void:
-	for c in dadi_box.get_children():
-		c.queue_free()
+## Dopo il lancio sulla pista il risultato si ingrandisce al centro dello schermo, poi va in alto
+func mostra_dadi(facce: Array, _suono: Callable) -> void:
+	togli_dadi()
 	if facce.is_empty():
 		return
 	var ws := []
@@ -349,39 +358,61 @@ func mostra_dadi(facce: Array, suono: Callable) -> void:
 		var w := _dado_widget(f)
 		dadi_box.add_child(w)
 		ws.append(w)
+	_dadi_ws = ws
 	await get_tree().process_frame
 	dadi_box.reset_size()
-	dadi_box.position.x = size.x / 2.0 - dadi_box.size.x / 2.0 - 120
-	# rotolamento
-	for k in 14:
-		for i in ws.size():
-			if not is_instance_valid(ws[i]):
-				return
-			var p: Control = ws[i].get_node("Faccia")
-			p.rotation = randf_range(-0.6, 0.6) * (1.0 - k / 14.0)
-			var fc: Dictionary = Dati.DADO[randi() % Dati.DADO.size()] if k < 13 else facce[i]
-			_testo_dado(p.get_node("N") as Label, fc)
-			p.get_node("V").visible = fc.get("v", false)
-		suono.call()
-		await get_tree().create_timer(0.06 + k * 0.008).timeout
-	for w in ws:
-		if not is_instance_valid(w):
-			return
-		var p: Control = w.get_node("Faccia")
-		p.rotation = 0
-		var tw := create_tween()
-		tw.tween_property(p, "scale", Vector2(1.2, 1.2), 0.1)
-		tw.tween_property(p, "scale", Vector2.ONE, 0.15)
+	var alto_x := size.x / 2.0 - dadi_box.size.x / 2.0 - 120
+	var grande := 2.0
+	dadi_box.pivot_offset = Vector2(dadi_box.size.x / 2.0, 75)
+	dadi_box.position = Vector2(size.x / 2.0 - dadi_box.size.x / 2.0, size.y / 2.0 - 75)
+	dadi_box.scale = Vector2(0.2, 0.2)
+	dadi_box.modulate = Color(1, 1, 1, 0)
+	var tw := create_tween()
+	tw.tween_property(dadi_box, "scale", Vector2(grande, grande), 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(dadi_box, "modulate", Color.WHITE, 0.2)
+	tw.tween_interval(0.9 / velocita)
+	tw.tween_property(dadi_box, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_CUBIC)
+	tw.parallel().tween_property(dadi_box, "position", Vector2(alto_x, 190), 0.4).set_trans(Tween.TRANS_CUBIC)
+	await tw.finished
 
+## Corsa al dado: il dado preso scende nella fila di sotto con il nome di chi l'ha preso
 func dado_preso(i: int, nome: String) -> void:
-	if i < dadi_box.get_child_count():
-		var w := dadi_box.get_child(i)
-		(w.get_node("Chi") as Label).text = nome
-		w.modulate = Color(1, 1, 1, 0.75)
+	if i >= _dadi_ws.size() or not is_instance_valid(_dadi_ws[i]):
+		return
+	var w: Control = _dadi_ws[i]
+	(w.get_node("Chi") as Label).text = nome
+	if w.get_parent() == dadi_box:
+		dadi_box.remove_child(w)
+		presi_box.add_child(w)
+	_presi_nome[nome] = w
+	w.pivot_offset = Vector2(75, 75)
+	w.scale = Vector2(1.3, 1.3)
+	var tw := create_tween()
+	tw.tween_property(w, "scale", Vector2.ONE, 0.25)
+	await _centra(dadi_box)
+	await _centra(presi_box)
+
+## Corsa al dado: si illumina il dado di chi sta giocando, gli altri si spengono un po'
+func evidenzia_preso(nome: String) -> void:
+	for c in presi_box.get_children():
+		var su: bool = _presi_nome.get(nome) == c
+		c.modulate = Color(1, 1, 1, 1.0 if su else 0.45)
+		c.scale = Vector2(1.12, 1.12) if su else Vector2.ONE
+
+func _centra(box: Control) -> void:
+	await get_tree().process_frame
+	box.reset_size()
+	box.position.x = size.x / 2.0 - box.size.x / 2.0 - 120
 
 func togli_dadi() -> void:
+	dadi_box.scale = Vector2.ONE
+	dadi_box.modulate = Color.WHITE
 	for c in dadi_box.get_children():
 		c.queue_free()
+	for c in presi_box.get_children():
+		c.queue_free()
+	_dadi_ws = []
+	_presi_nome = {}
 
 # ------------------------------------------------------------------ cronista
 func _crea_avatar() -> void:
@@ -412,7 +443,7 @@ func parla(testo: String, posa: String) -> void:
 		avatar.texture = pose[posa]
 	elif posa.begins_with("conta"):
 		avatar.texture = pose["parla"]
-	fumetto.visible = testo != ""
+	fumetto.visible = testo != "" and not sala.visible
 	testo_fumetto.text = testo
 	var larg := clampf(testo.length() * 18.0, 260.0, maxf(300.0, minf(900.0, get_viewport_rect().size.x - 760.0)))
 	testo_fumetto.custom_minimum_size = Vector2(larg, 0)
@@ -449,6 +480,8 @@ func _crea_sala() -> void:
 	p.anchor_bottom = 0.5
 	p.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	p.grow_vertical = Control.GROW_DIRECTION_BOTH
+	p.offset_left = 130
+	p.offset_right = 130
 	p.name = "Pannello"
 	sala.add_child(p)
 	var h := HBoxContainer.new()
@@ -483,7 +516,7 @@ func _crea_sala() -> void:
 	dx.add_child(sala_conteggio)
 	sala_giocatori = GridContainer.new()
 	sala_giocatori.columns = 2
-	sala_giocatori.custom_minimum_size = Vector2(620, 190)
+	sala_giocatori.custom_minimum_size = Vector2(620, 110)
 	sala_giocatori.add_theme_constant_override("h_separation", 14)
 	sala_giocatori.add_theme_constant_override("v_separation", 8)
 	dx.add_child(sala_giocatori)
@@ -493,6 +526,7 @@ func _crea_sala() -> void:
 	_opzione(dx, "posta", "Posta a testa", [["15 euro", 15.0], ["3 euro", 3.0], ["1,50 euro", 1.5], ["per gioco", 0.0]], 15.0)
 	_opzione(dx, "token", "Token sulla pista", [["col pallino verde", false], ["sempre", true]], false)
 	_opzione(dx, "corsa_dado", "Corsa al dado", [["sì", true], ["no", false]], true)
+	_opzione(dx, "velocita", "Velocità di gioco", [["lenta", 0.7], ["normale", 1.0], ["veloce", 1.8]], 1.0)
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 16)
 	dx.add_child(hb)
@@ -538,6 +572,8 @@ func imposta_opzione(chiave: String, valore) -> void:
 
 func mostra_sala(si: bool) -> void:
 	sala.visible = si
+	if si:
+		fumetto.visible = false
 	pannello_destra.visible = not si
 	titolo_img.visible = true
 

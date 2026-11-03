@@ -42,7 +42,8 @@ func _ready() -> void:
 	ip.spostamento_ui = Vector2(0.1, 0.12)
 	await get_tree().process_frame
 	params = rete.parametri()
-	veloce = maxf(1.0, float(params.get("veloce", "1")))
+	veloce = maxf(0.5, float(params.get("veloce", "1")))
+	ui.velocita = veloce
 	auto = params.get("auto", "") != ""
 	if params.has("pista"):
 		m.cfg["rettilinei"] = int(params["pista"])
@@ -144,6 +145,8 @@ func _comando(nome: String, valore) -> void:
 					m.cfg["token_sempre"] = bool(v)
 				"corsa_dado":
 					m.cfg["corsa_dado"] = bool(v)
+				"velocita":
+					imposta_velocita(float(v))
 			_sporco = true
 			ui.aggiorna_classifica(m)
 		"voce":
@@ -158,6 +161,13 @@ func _comando(nome: String, valore) -> void:
 			_scelta_fine = "altra"
 		"sala":
 			_scelta_fine = "sala"
+
+## lenta 0.7, normale 1, veloce 1.8: animazioni, attese e voce del cronista
+func imposta_velocita(x: float) -> void:
+	veloce = x
+	m.cfg["velocita"] = x
+	ui.velocita = x
+	rete.velocita_voce(clampf(0.85 + (x - 1.0) * 0.35, 0.8, 1.3))
 
 func _gioca() -> void:
 	_in_gioco = true
@@ -178,6 +188,9 @@ func _riprendi() -> void:
 		return
 	_in_gioco = true
 	m.carica(s["motore"])
+	if m.cfg.has("velocita"):
+		imposta_velocita(float(m.cfg["velocita"]))
+		ui.imposta_opzione("velocita", float(m.cfg["velocita"]))
 	ip.costruisci(m.pista)
 	ui.mostra_sala(false)
 	invia_tutti_i_segreti()
@@ -278,7 +291,7 @@ func _process(delta: float) -> void:
 			_salva_punto()
 		if m.fase != "attesa" and ui.sala.visible:
 			ui.mostra_sala(false)
-		if m.fase == "corsa" and m.di_turno == "" and _domanda.is_empty() and m.n_turno > 0:
+		if m.fase == "corsa" and m.di_turno == "" and _domanda.is_empty() and m.n_turno > 0 and not m.in_corsa_dado:
 			ui.togli_dadi()
 			if ui.banner.visible and not ui.banner_titolo.text.begins_with("CORSA"):
 				ui.mostra_banner("")

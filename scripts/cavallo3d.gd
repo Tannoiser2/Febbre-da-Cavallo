@@ -21,20 +21,6 @@ func prepara(i: int, mesh: Mesh, font: Font) -> void:
 	var col := Dati.colore(i)
 	modello = Node3D.new()
 	add_child(modello)
-	# basetta
-	var base := MeshInstance3D.new()
-	var cil := CylinderMesh.new()
-	cil.top_radius = 1.05
-	cil.bottom_radius = 1.12
-	cil.height = 0.22
-	cil.radial_segments = 28
-	base.mesh = cil
-	var mb := StandardMaterial3D.new()
-	mb.albedo_color = col.darkened(0.15)
-	mb.roughness = 0.4
-	base.material_override = mb
-	base.position.y = 0.11
-	modello.add_child(base)
 	# cavallo
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
@@ -47,7 +33,7 @@ func prepara(i: int, mesh: Mesh, font: Font) -> void:
 	mat.set_shader_parameter("fase", i * 1.7)
 	mi.material_override = mat
 	mi.scale = Vector3.ONE * SCALA
-	mi.position.y = 0.22
+	mi.position.y = 0.02
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	modello.add_child(mi)
 	# anello che lampeggia quando il cavallo si può scegliere
@@ -63,7 +49,7 @@ func prepara(i: int, mesh: Mesh, font: Font) -> void:
 	ma.emission_energy_multiplier = 1.6
 	ma.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	anello.material_override = ma
-	anello.position.y = 0.15
+	anello.position.y = 0.06
 	anello.visible = false
 	add_child(anello)
 	# nome
@@ -99,6 +85,7 @@ func imposta(attivo: bool, zoppo: bool) -> void:
 	_testa_obj = 0.0 if attivo else 1.0
 	mat.set_shader_parameter("spento", 0.0 if attivo else 1.0)
 	stato_etichetta.text = "AZZOPPATO" if zoppo else ""
+	mat.set_shader_parameter("seduto", 1.0 if zoppo else 0.0)
 
 func galoppa(si: bool) -> void:
 	_galoppo_obj = 1.0 if si else 0.0

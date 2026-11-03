@@ -1,7 +1,7 @@
 // Ponte tra la TV (Godot, versione web) e il resto: stanza su Firebase, telefoni, voce, suoni, QR code.
 // Godot lo usa con JavaScriptBridge.get_interface("FR"). Tutto passa come testo JSON.
 import { creaRete, nuovoCodice, RADICE } from './rete.js';
-import { parla, setVoce, suona } from './suoni.js';
+import { parla, setVoce, suona, impostaVoce } from './suoni.js';
 
 const coda = [];
 const q = new URLSearchParams(location.search);
@@ -71,6 +71,7 @@ window.FR = {
   parlato(id) { return !!parlati[id]; },
   suono(n) { suona(n); },
   voce(v) { setVoce(!!v); },
+  velocitaVoce(x) { impostaVoce({ vel: Number(x) || 1 }); },
   schermoIntero() {
     const d = document.documentElement;
     try {

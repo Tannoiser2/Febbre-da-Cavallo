@@ -9,6 +9,7 @@ uniform float fase = 0.0;      // sfasamento tra un cavallo e l'altro
 uniform float testa = 0.0;     // 0 testa alta (Attivo), 1 testa bassa (Disattivo)
 uniform float spento = 0.0;    // 0 colori pieni, 1 un po' smorti
 uniform float evidenzia = 0.0; // bagliore quando il cavallo si può scegliere
+uniform float seduto = 0.0;    // 1 = azzoppato: seduto sul posteriore, muso a terra
 
 vec3 ruota_x(vec3 p, float y0, float z0, float a) {
 	float dy = p.y - y0;
@@ -33,7 +34,7 @@ void vertex() {
 	p = mix(p, ruota_x(p, 2.0, 1.6, a_post * m_post), step(0.001, m_post));
 	// testa e collo (attaccatura a y 2.35, z -1.05)
 	float m_testa = smoothstep(-0.95, -1.35, p.z) * smoothstep(1.4, 2.0, p.y);
-	float a_testa = -(testa * 0.95) + g * 0.1 * sin(2.0 * t);
+	float a_testa = -(testa * 0.95) - seduto * 0.25 + g * 0.1 * sin(2.0 * t);
 	p = mix(p, ruota_x(p, 2.35, -1.05, a_testa * m_testa), step(0.001, m_testa));
 	// coda
 	float m_coda = smoothstep(2.0, 2.45, p.z) * smoothstep(1.9, 2.3, p.y);
@@ -42,13 +43,17 @@ void vertex() {
 	// il corpo va su e giù col galoppo
 	p.y += g * 0.18 * (0.5 + 0.5 * sin(2.0 * t));
 	p = ruota_x(p, 1.8, 0.0, g * 0.05 * sin(2.0 * t + 1.0));
+	// azzoppato: il posteriore scende a terra (si siede), le zampe dietro si piegano sotto
+	p = ruota_x(p, 0.0, -0.8, seduto * 0.22);
+	p.y -= seduto * 1.15;
+	p.y = mix(p.y, max(p.y, 0.06 + 0.1 * smoothstep(0.0, 1.5, p.z)), seduto);
 	VERTEX = p;
 }
 
 void fragment() {
 	vec3 c = colore.rgb;
 	float grigio = dot(c, vec3(0.3, 0.59, 0.11));
-	c = mix(c, vec3(grigio) * 0.8 + 0.1, spento * 0.55);
+	c = mix(c, vec3(0.5 + grigio * 0.15), spento * 0.92);
 	ALBEDO = c;
 	ROUGHNESS = 0.5;
 	SPECULAR = 0.4;

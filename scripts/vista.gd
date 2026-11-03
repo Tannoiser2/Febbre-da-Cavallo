@@ -31,7 +31,7 @@ func dici(t: String, posa := "parla") -> void:
 	main.frase_per_telefoni(t)
 	ui.parla(t, posa)
 	var id := -1
-	if voce_attiva and main.veloce <= 1.0:
+	if voce_attiva and main.veloce <= 2.0:
 		id = rete.parla(t)
 	var stima: float = (0.9 + t.length() * 0.055) / main.veloce
 	var t0 := Time.get_ticks_msec()
@@ -84,13 +84,21 @@ func estrazione_multipla(uids: Array) -> void:
 	await _attendi(0.6)
 
 func dado(facce: Array) -> void:
-	await ui.mostra_dadi(facce, func(): rete.suono("dado"))
+	ui.togli_dadi()
+	var nodi: Array = await ip.lancia_dadi(facce, func(): rete.suono("dado"), main.veloce)
+	await _attendi(0.3)
+	await ui.mostra_dadi(facce, func(): pass)
+	ip.togli_dadi_3d(nodi)
 	if facce.size() == 1 and facce[0].get("v", false):
 		rete.suono("verde")
 	await _attendi(0.4)
 
+func dado_corsa_turno(uid: String) -> void:
+	ui.evidenzia_preso(m.nome_g(uid))
+	await _attendi(0.3)
+
 func dado_preso(i: int, uid: String) -> void:
-	ui.dado_preso(i, m.nome_g(uid))
+	await ui.dado_preso(i, m.nome_g(uid))
 	rete.suono("preso")
 	await _attendi(0.2)
 

@@ -33,8 +33,9 @@ I telefoni aprono `telefono.html` dal QR code, oppure scrivono il codice di 4 le
      **colonna** della casella: un token vale per tutte le caselle affiancate da un bordo all'altro della pista
      (sulla TV la colonna è colorata d'azzurro). Chi lo ha pescato decide cavallo e casella quando serve.
 4. **Corsa al dado** - ogni tanto (con almeno 3 giocatori) la TV tira 2 dadi (3 con più di 5 giocatori),
-   estrae altrettanti giocatori, anche fra quelli che hanno già giocato nel giro, e sui loro telefoni compaiono i dadi: chi tocca per primo sceglie il dado
-   migliore, poi gli altri. Poi ognuno gioca il suo turno con il dado preso.
+   estrae altrettanti giocatori, anche fra quelli che hanno già giocato nel giro, e sui loro telefoni compaiono i dadi: si fa a gara a
+   prenderli, e ogni dado preso scende sotto con il nome di chi l'ha preso. Poi tutti giocano il loro dado, **dal più lento al più
+   veloce**: chi l'ha preso per primo gioca per ultimo.
 5. **Arrivo e premi** - vince il primo cavallo che oltrepassa l'ultima casella. Si svelano le puntate:
    ognuno incassa tante quote quanti sono i punti dei suoi talloncini del cavallo vincente. Sul telefono di
    chi vince compare *HAI VINTO!* con il premio. La TV tiene il saldo della serata; *Un'altra corsa!*
@@ -55,8 +56,11 @@ I telefoni aprono `telefono.html` dal QR code, oppure scrivono il codice di 4 le
 | Spazzata (!) | 1 | tornano nel sacchetto lei e tutti i token dietro l'ultimo cavallo |
 | Sorpresa (?) | 2 | un effetto a caso tra gli altri |
 
-Un token pescato resta sulla casella; un token già in pista, dopo l'effetto, si sposta su una casella vicina
-scelta dal giocatore (Volata a tre, Azzoppato e Spazzata tornano invece nel sacchetto).
+Un token pescato resta sulla sua colonna; un token già in pista, dopo l'effetto, si sposta sulla colonna subito
+avanti o subito dietro, a scelta del giocatore (Volata a tre, Azzoppato e Spazzata tornano invece nel sacchetto).
+Sulla TV i token stanno sul prato, fuori dal bordo esterno, all'altezza della loro colonna (colorata d'azzurro).
+I cavalli Disattivi diventano grigi; il cavallo azzoppato si accascia a lato della pista col muso a terra e
+rientra Disattivo al turno successivo. Nella sala d'attesa si sceglie anche la velocità: lenta, normale, veloce.
 
 **Scelte fatte dove il regolamento non lo dice** (si cambiano facilmente in `scripts/dati.gd`):
 - le quantità dei token sono quelle della tabella qui sopra;
