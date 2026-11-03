@@ -58,6 +58,7 @@ button:disabled { background: #bdb3a5 !important; border-color: #9a8f80 !importa
 .dadi { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 .dado { width: 120px; height: 120px; background: #fbf6e9; color: var(--scuro); border: 5px solid #3a2a1a; border-radius: 22px;
   font-size: 84px; position: relative; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 0 #3a2a1a; padding: 0; }
+.dado.doppio { font-size: 46px; line-height: .95; flex-direction: column; }
 .dado .pv { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 50%; background: #22b04a; border: 3px solid #0d5a24; }
 .dado.tira { animation: trema .4s infinite; }
 @keyframes trema { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }

@@ -20,18 +20,20 @@ I telefoni aprono `telefono.html` dal QR code, oppure scrivono il codice di 4 le
 2. **Le pile** - i 40 talloncini (8 cavalli x quote da 1 a 5) sono mescolati in 8 pile da 5. Ognuno sceglie
    una pila dal telefono e la guarda di nascosto (*Guarda di nascosto* / *Nascondi*). Il montepremi è
    diviso in 15 quote.
-3. **La corsa** - a ogni turno **la sorte estrae chi gioca** (non si va in senso orario: chi ha giocato meno
-   ha più probabilità, chi ha appena giocato meno). Il giocatore tira il dado dal telefono, sceglie un cavallo
-   **Attivo** (testa alta), avanti o indietro, e la casella d'arrivo se ce n'è più d'una (le caselle possibili
-   compaiono numerate sulla pista, sulla TV). Il cavallo mosso abbassa la testa (Disattivo); quando tutti
+3. **La corsa** - a ogni turno **la sorte estrae chi gioca** (non si va in senso orario), ma una sola volta per
+   giro: chi ha già giocato aspetta che abbiano giocato tutti, poi si ricomincia. Il giocatore tira il dado dal
+   telefono, sceglie un cavallo **Attivo** (testa alta) e, con le facce *+N -N*, se usare +N o -N; poi la casella
+   d'arrivo se ce n'è più d'una (le caselle possibili compaiono numerate sulla pista, sulla TV). Il cavallo mosso abbassa la testa (Disattivo); quando tutti
    sono Disattivi si rialzano tutti.
    - nei rettilinei si cambia corsia liberamente, nelle curve no (la corsia interna ha 1 casella per curva,
      quella centrale 2, l'esterna 3, come nei pezzi stampati);
    - non ci si ferma mai su un altro cavallo, ma lo si può scavalcare;
-   - con il **pallino verde** sul dado si pesca un TOKEN dal sacchetto (o si usa quello già sulla casella)
-     e si risolve subito; chi lo ha pescato decide cavallo e casella quando serve.
+   - il **dado**: +1 col pallino, +1 -1, +2 col pallino, +2, +2 -2, +3 col pallino;
+   - con il **pallino verde** si pesca un TOKEN dal sacchetto, oppure si usa quello già presente nella
+     **colonna** della casella: un token vale per tutte le caselle affiancate da un bordo all'altro della pista
+     (sulla TV la colonna è colorata d'azzurro). Chi lo ha pescato decide cavallo e casella quando serve.
 4. **Corsa al dado** - ogni tanto (con almeno 3 giocatori) la TV tira 2 dadi (3 con più di 5 giocatori),
-   estrae altrettanti giocatori e sui loro telefoni compaiono i dadi: chi tocca per primo sceglie il dado
+   estrae altrettanti giocatori, anche fra quelli che hanno già giocato nel giro, e sui loro telefoni compaiono i dadi: chi tocca per primo sceglie il dado
    migliore, poi gli altri. Poi ognuno gioca il suo turno con il dado preso.
 5. **Arrivo e premi** - vince il primo cavallo che oltrepassa l'ultima casella. Si svelano le puntate:
    ognuno incassa tante quote quanti sono i punti dei suoi talloncini del cavallo vincente. Sul telefono di
@@ -57,7 +59,6 @@ Un token pescato resta sulla casella; un token già in pista, dopo l'effetto, si
 scelta dal giocatore (Volata a tre, Azzoppato e Spazzata tornano invece nel sacchetto).
 
 **Scelte fatte dove il regolamento non lo dice** (si cambiano facilmente in `scripts/dati.gd`):
-- il dado ha le facce 1, 2, 3 normali e 1, 2, 3 con il pallino verde;
 - le quantità dei token sono quelle della tabella qui sopra;
 - il token *?* (non descritto nel regolamento) è diventato *Sorpresa*: un effetto a caso.
 
@@ -65,7 +66,8 @@ scelta dal giocatore (Volata a tre, Azzoppato e Spazzata tornano invece nel sacc
 
 In alto a sinistra: **Schermo intero**, **Voce sì/no**, **Decidi tu** (se qualcuno si è addormentato: la TV
 sceglie al suo posto; lo fa comunque da sola dopo 90 secondi, 25 nella corsa al dado). Se la TV si ricarica,
-nella sala d'attesa compare **Riprendi la corsa**: si riparte dall'ultimo turno con la stessa stanza.
+nella sala d'attesa compare **Riprendi la corsa interrotta** accanto a **Nuova corsa!**: si riparte dall'ultimo
+turno con la stessa stanza, oppure si ricomincia da capo.
 
 ## Consigli per la serata
 

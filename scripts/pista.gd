@@ -27,6 +27,7 @@ var file := []              # file dei rettilinei: [id corsia 0, 1, 2]
 var succ := {}
 var prec := {}
 var adiacenti := {}
+var colonna := {}          # caselle affiancate da un bordo all'altro (sovrapposte lungo la pista)
 
 func _init(rettilinei: int = 4) -> void:
 	n_rettilinei = max(2, rettilinei - rettilinei % 2)
@@ -79,6 +80,16 @@ func _costruisci() -> void:
 			if _intervalli_toccano(a["s0"], a["s1"], b["s0"], b["s1"]):
 				l.append(b["id"])
 		adiacenti[a["id"]] = l
+	_calcola_colonne()
+
+func _calcola_colonne() -> void:
+	for a in celle:
+		var l := []
+		for b in celle:
+			var sov := minf(a["s1"], b["s1"]) - maxf(a["s0"], b["s0"])
+			if sov > 0.05:
+				l.append(b["id"])
+		colonna[a["id"]] = l
 
 func _intervalli_toccano(a0: float, a1: float, b0: float, b1: float) -> bool:
 	var e := 0.01

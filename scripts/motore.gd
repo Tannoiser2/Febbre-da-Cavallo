@@ -30,6 +30,7 @@ var vincitore := -1
 var n_corsa := 0
 var n_turno := 0
 var salta_prossimo := false
+var giro := []              # chi ha già giocato in questo giro (si ricomincia quando hanno giocato tutti)
 var ultimo_uid := ""
 var di_turno := ""          # uid di chi sta giocando ora
 var dado_attuale := []      # facce in mostra
@@ -87,6 +88,7 @@ func prepara_corsa() -> void:
 	n_turno = 0
 	salta_prossimo = false
 	ultimo_uid = ""
+	giro = []
 	di_turno = ""
 	dado_attuale = []
 	risultati = []
@@ -160,6 +162,7 @@ func gioca_turno() -> void:
 		await corsa_al_dado()
 	else:
 		var uid := estrai_giocatore()
+		giro.append(uid)
 		di_turno = uid
 		trova(uid)["turni"] += 1
 		ultimo_uid = uid
@@ -181,29 +184,25 @@ func gioca_turno() -> void:
 	dado_attuale = []
 	cambiato.emit()
 
-func estrai_giocatore(escludi := []) -> String:
-	var mx := 0
+## Il giocatore di turno lo estrae la sorte, ma una sola volta per giro: chi ha giocato aspetta
+## che abbiano giocato tutti. Nella corsa al dado (tutti = true) possono uscire anche loro.
+func estrai_giocatore(escludi := [], tutti := false) -> String:
+	var cand := []
 	for g in giocatori:
-		mx = max(mx, g["turni"])
-	var tot := 0.0
-	var pesi := []
-	for g in giocatori:
-		var w := 0.0
-		if not escludi.has(g["uid"]):
-			w = 1.0 + 0.7 * (mx - g["turni"])
-			if g["uid"] == ultimo_uid and giocatori.size() > 1:
-				w *= 0.2
-		pesi.append(w)
-		tot += w
-	var x := randf() * tot
-	for i in giocatori.size():
-		x -= pesi[i]
-		if x <= 0.0 and pesi[i] > 0.0:
-			return giocatori[i]["uid"]
-	for g in giocatori:
-		if not escludi.has(g["uid"]):
-			return g["uid"]
-	return giocatori[0]["uid"]
+		if not escludi.has(g["uid"]) and (tutti or not giro.has(g["uid"])):
+			cand.append(g["uid"])
+	if cand.is_empty() and not tutti:
+		giro = []
+		for g in giocatori:
+			if not escludi.has(g["uid"]) and (g["uid"] != ultimo_uid or giocatori.size() == 1):
+				cand.append(g["uid"])
+	if cand.is_empty():
+		for g in giocatori:
+			if not escludi.has(g["uid"]):
+				cand.append(g["uid"])
+	if cand.is_empty():
+		return giocatori[0]["uid"]
+	return cand[randi() % cand.size()]
 
 func _corsa_al_dado_ora() -> bool:
 	return cfg["corsa_dado"] and giocatori.size() >= 3 and n_turno >= 3 and not salta_prossimo and randf() < 0.22
@@ -215,7 +214,7 @@ func corsa_al_dado() -> void:
 		facce.append(Dati.DADO[randi() % Dati.DADO.size()])
 	var scelti := []
 	for i in k:
-		scelti.append(estrai_giocatore(scelti))
+		scelti.append(estrai_giocatore(scelti, true))
 	dado_attuale = facce
 	cambiato.emit()
 	await v.dici(Dati.frase("corsa_dado"), "sorpreso")
@@ -227,7 +226,7 @@ func corsa_al_dado() -> void:
 	while liberi.size() > 1:
 		var op := []
 		for i in facce.size():
-			op.append({"k": i, "t": str(facce[i]["n"]), "v": facce[i]["v"], "ok": not presi.has(i)})
+			op.append({"k": i, "t": Dati.testo_faccia(facce[i]), "n": facce[i]["n"], "v": facce[i]["v"], "e": facce[i].get("e", false), "ok": not presi.has(i)})
 		var r: Dictionary = await _chiedi(liberi, "prendi", "Prendi un dado, presto!", op,
 			{"sotto": "Il più veloce sceglie per primo", "scopo": "prendi", "corsa": true})
 		presi[int(r["k"])] = r["uid"]
@@ -254,39 +253,43 @@ func corsa_al_dado() -> void:
 		await v.dado([p[1]])
 		await esegui_mossa(uid, p[1])
 
-## Le mosse possibili per un cavallo con n passi: {"avanti": dest, "indietro": dest}
-func mosse(cid: int, n: int) -> Dictionary:
+## Le mosse possibili per un cavallo con n passi: {"avanti": dest, "indietro": dest}.
+## Indietro solo se la faccia del dado è "+N -N".
+func mosse(cid: int, n: int, indietro := true) -> Dictionary:
 	var c: Dictionary = cavalli[cid]
 	var occ := occupate(cid)
 	var res := {}
 	var a := pista.destinazioni(c["cella"], n, true, occ)
 	if a["celle"].size() or a["traguardo"]:
 		res["avanti"] = a
-	var d := pista.destinazioni(c["cella"], n, false, occ)
-	if d["celle"].size():
-		res["indietro"] = d
+	if indietro:
+		var d := pista.destinazioni(c["cella"], n, false, occ)
+		if d["celle"].size():
+			res["indietro"] = d
 	return res
 
 func esegui_mossa(uid: String, faccia: Dictionary) -> void:
 	var n: int = faccia["n"]
+	var e: bool = faccia.get("e", false)
 	var validi := []
 	for c in cavalli:
-		if c["attivo"] and not c["zoppo"] and mosse(c["id"], n).size():
+		if c["attivo"] and not c["zoppo"] and mosse(c["id"], n, e).size():
 			validi.append(c["id"])
 	if validi.is_empty():
 		await v.dici(Dati.frase("nessuna"), "pensa")
 		_log("nessuna mossa")
 		await _controlla_ripristino()
 		return
-	var cid: int = await chiedi_cavallo(uid, "Quale cavallo muovi di %d?" % n, validi, "muovi")
-	var m := mosse(cid, n)
+	var tit := ("Quale cavallo muovi di %d (avanti o indietro)?" % n) if e else ("Quale cavallo fai avanzare di %d?" % n)
+	var cid: int = await chiedi_cavallo(uid, tit, validi, "muovi")
+	var m := mosse(cid, n, e)
 	var verso := "avanti"
 	if m.size() > 1:
 		var op := [
-			{"k": "avanti", "t": "Avanti di %d" % n, "ok": true},
-			{"k": "indietro", "t": "Indietro di %d" % n, "ok": true},
+			{"k": "avanti", "t": "+%d  avanti" % n, "ok": true},
+			{"k": "indietro", "t": "-%d  indietro" % n, "ok": true},
 		]
-		var r: Dictionary = await _chiedi([uid], "verso", Dati.nome(cid) + ": avanti o indietro?", op, {"scopo": "verso", "cavallo": cid})
+		var r: Dictionary = await _chiedi([uid], "verso", Dati.nome(cid) + ": quale risultato usi?", op, {"scopo": "verso", "cavallo": cid})
 		verso = r["k"]
 	else:
 		verso = m.keys()[0]
@@ -390,24 +393,33 @@ func chiedi_casella(uid: String, titolo: String, scelte: Array, rispetto: int, e
 	return int(r["k"])
 
 # ------------------------------------------------------------------ token
+## Il token vale per tutta la "colonna": le caselle affiancate da un bordo all'altro della pista.
+func token_nella_colonna(cella: int, ignora := -99) -> int:
+	for c in pista.colonna[cella]:
+		if c != ignora and token.has(c):
+			return c
+	return -1
+
 func risolvi_casella(uid: String, cid: int, verde: bool, origine: int, prof: int) -> void:
 	var cella: int = cavalli[cid]["cella"]
 	if cella < 0 or prof > 3:
 		return
 	var tipo := ""
 	var esistente := false
-	if token.has(cella):
+	var tc := token_nella_colonna(cella)
+	if tc >= 0:
 		if verde or cfg["token_sempre"] or prof > 0:
-			tipo = token[cella]
+			tipo = token[tc]
 			esistente = true
 	elif verde and prof == 0:
 		if sacchetto.is_empty():
 			return
 		tipo = sacchetto.pop_back()
+		tc = cella
 	if tipo == "":
 		return
-	_log("token %s %s su %d" % [tipo, "esistente" if esistente else "pescato", cella])
-	await v.token_rivela(tipo, cella, esistente)
+	_log("token %s %s su %d" % [tipo, "esistente" if esistente else "pescato", tc])
+	await v.token_rivela(tipo, tc, esistente)
 	await v.dici(Dati.TOKEN[tipo]["nome"] + "! " + Dati.TOKEN[tipo]["testo"], "sussurra")
 	var efficace := tipo
 	if tipo == "sorpresa":
@@ -417,33 +429,33 @@ func risolvi_casella(uid: String, cid: int, verde: bool, origine: int, prof: int
 	# dove va il token dopo l'effetto
 	if not esistente:
 		if tipo != "allarme":
-			token[cella] = tipo
-	await applica(uid, cid, efficace, origine, prof, cella)
-	if esistente and token.get(cella, "") == tipo:
+			token[tc] = tipo
+	await applica(uid, cid, efficace, origine, prof, tc)
+	if esistente and token.get(tc, "") == tipo:
 		if tipo in ["tre", "azzoppato", "allarme"]:
-			token.erase(cella)
+			token.erase(tc)
 			sacchetto.append(tipo)
 			sacchetto.shuffle()
-			await v.token_via([cella])
+			await v.token_via([tc])
 		else:
 			var libere := []
-			for a in pista.adiacenti[cella]:
-				if not token.has(a):
+			for a in pista.adiacenti[tc]:
+				if token_nella_colonna(a, tc) < 0 and not pista.colonna[tc].has(a):
 					libere.append(a)
-			token.erase(cella)
+			token.erase(tc)
 			in_mano = 1
 			if libere.is_empty():
 				sacchetto.append(tipo)
 				sacchetto.shuffle()
 				in_mano = 0
-				await v.token_via([cella])
+				await v.token_via([tc])
 			else:
 				var dove: int = libere[0]
 				if libere.size() > 1:
-					dove = await chiedi_casella(uid, "Dove sposti il token " + Dati.TOKEN[tipo]["nome"] + "?", libere, cella, {"scopo": "sposta_token", "token": tipo})
+					dove = await chiedi_casella(uid, "Dove sposti il token " + Dati.TOKEN[tipo]["nome"] + "?", libere, tc, {"scopo": "sposta_token", "token": tipo})
 				token[dove] = tipo
 				in_mano = 0
-				await v.token_sposta(cella, dove, tipo)
+				await v.token_sposta(tc, dove, tipo)
 	cambiato.emit()
 	await v.aggiorna()
 
@@ -459,7 +471,7 @@ func applica(uid: String, cid: int, tipo: String, origine: int, prof: int, cella
 			var da: int = c["cella"]
 			var dest := await chiedi_destinazione(uid, cid, d, "Dove si ferma " + Dati.nome(cid) + "?")
 			await muovi(cid, da, dest, d, true)
-			if vincitore < 0 and token.has(dest) and cfg["token_sempre"]:
+			if vincitore < 0 and dest >= 0 and token_nella_colonna(dest) >= 0 and cfg["token_sempre"]:
 				await risolvi_casella(uid, cid, false, da, prof + 1)
 		"supera":
 			await _supera(uid, cid)
@@ -688,7 +700,7 @@ func scelta_automatica(d: Dictionary, uid: String):
 			var cid: int = d.get("cavallo", 0)
 			return "avanti" if valore[cid] > 0 or randf() < 0.3 else "indietro"
 		"prendi":
-			ok.sort_custom(func(a, b): return int(a["t"]) + (0.5 if a.get("v", false) else 0.0) > int(b["t"]) + (0.5 if b.get("v", false) else 0.0))
+			ok.sort_custom(func(a, b): return int(a["n"]) + (0.5 if a.get("v", false) else 0.0) + (0.3 if a.get("e", false) else 0.0) > int(b["n"]) + (0.5 if b.get("v", false) else 0.0) + (0.3 if b.get("e", false) else 0.0))
 			return ok[0]["k"]
 	return ok[randi() % ok.size()]["k"]
 
@@ -726,7 +738,7 @@ func segreto(uid: String) -> Dictionary:
 # ------------------------------------------------------------------ salvataggio (per riprendere)
 func salva() -> Dictionary:
 	return {"cfg": cfg, "fase": fase, "giocatori": giocatori, "cavalli": cavalli, "token": token, "sacchetto": sacchetto,
-		"pile": pile, "n_corsa": n_corsa, "n_turno": n_turno, "salta": salta_prossimo, "ultimo": ultimo_uid}
+		"pile": pile, "n_corsa": n_corsa, "n_turno": n_turno, "salta": salta_prossimo, "ultimo": ultimo_uid, "giro": giro}
 
 func carica(s: Dictionary) -> void:
 	cfg.merge(s["cfg"], true)
@@ -753,6 +765,7 @@ func carica(s: Dictionary) -> void:
 	n_turno = int(s["n_turno"])
 	salta_prossimo = s["salta"]
 	ultimo_uid = s["ultimo"]
+	giro = s.get("giro", [])
 	vincitore = -1
 
 ## Riprende una corsa salvata dall'inizio del turno.

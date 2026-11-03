@@ -61,7 +61,8 @@ func _ready() -> void:
 				_salvata = ""
 		rete.avvia(cod)
 		if _salvata != "":
-			ui.sala_parti.text = "RIPRENDI LA CORSA"
+			ui.sala_riprendi.visible = true
+			ui.sala_riprendi.text = "RIPRENDI LA CORSA\nINTERROTTA"
 	else:
 		ui.imposta_qr("", 0, "PROVA", "Versione di prova sul computer: aggiungi i giocatori finti")
 	for i in int(params.get("bot", "0")):
@@ -118,10 +119,14 @@ func _azione(uid: String, e: Dictionary) -> void:
 func _comando(nome: String, valore) -> void:
 	match nome:
 		"parti":
-			if _salvata != "":
-				_riprendi()
-			elif m.giocatori.size() >= 2 and not _in_gioco:
+			if m.giocatori.size() >= 2 and not _in_gioco:
+				_salvata = ""
+				ui.sala_riprendi.visible = false
+				rete.salva("fdc_partita", "")
 				_gioca()
+		"riprendi":
+			if _salvata != "" and not _in_gioco:
+				_riprendi()
 		"bot":
 			if m.fase == "attesa":
 				_aggiungi_bot()
@@ -168,7 +173,7 @@ func _gioca() -> void:
 func _riprendi() -> void:
 	var s = JSON.parse_string(_salvata)
 	_salvata = ""
-	ui.sala_parti.text = "SI PARTE!"
+	ui.sala_riprendi.visible = false
 	if not (s is Dictionary):
 		return
 	_in_gioco = true

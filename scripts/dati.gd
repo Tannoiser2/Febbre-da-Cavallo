@@ -13,12 +13,21 @@ const CAVALLI := [
 	{"nome": "Nerone", "colore": "#2b2b2b"},
 ]
 
-## Facce del dado movimento: numero e pallino verde (con il pallino verde si pesca un TOKEN).
-## Per cambiare il dado basta modificare questa lista.
+## Facce del dado movimento: n = caselle, v = pallino verde (si pesca un TOKEN),
+## e = "+N -N" (il giocatore sceglie se andare avanti o indietro). Le altre facce vanno solo avanti.
 const DADO := [
-	{"n": 1, "v": false}, {"n": 2, "v": false}, {"n": 3, "v": false},
-	{"n": 1, "v": true}, {"n": 2, "v": true}, {"n": 3, "v": true},
+	{"n": 1, "v": true, "e": false},
+	{"n": 1, "v": false, "e": true},
+	{"n": 2, "v": true, "e": false},
+	{"n": 2, "v": false, "e": false},
+	{"n": 2, "v": false, "e": true},
+	{"n": 3, "v": true, "e": false},
 ]
+
+static func testo_faccia(f: Dictionary) -> String:
+	if f.get("e", false):
+		return "+%d -%d" % [f["n"], f["n"]]
+	return "+%d" % f["n"]
 
 ## I 20 TOKEN movimento del sacchetto: tipo -> quanti, nome, spiegazione breve
 const TOKEN := {

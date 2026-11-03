@@ -12,6 +12,7 @@ var pista: Pista
 var font: Font
 var cavalli := []            # Cavallo3D
 var token_nodi := {}         # cella -> Node3D
+var _bande: MeshInstance3D = null   # le colonne coperte dai token
 var marcatori := []
 var cam: Camera3D
 var _cam_target := Vector3.ZERO
@@ -481,6 +482,30 @@ func sincronizza(m: Motore) -> void:
 		elif token_nodi[k].get_meta("tipo") != m.token[k]:
 			token_nodi[k].queue_free()
 			metti_token(k, m.token[k])
+	disegna_colonne(m.token.keys())
+
+## Il token vale per tutta la colonna: le caselle affiancate si colorano di azzurro chiaro
+func disegna_colonne(celle_token: Array) -> void:
+	if _bande:
+		_bande.queue_free()
+		_bande = null
+	if celle_token.is_empty():
+		return
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for t in celle_token:
+		for c in pista.colonna[t]:
+			_poligono_inset(st, pista.celle[c], 0.12, 0.05)
+	_bande = MeshInstance3D.new()
+	_bande.mesh = st.commit()
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.3, 0.72, 1.0, 0.62)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_bande.material_override = m
+	_bande.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_bande)
 
 func _metti_zoppo(h: Cavallo3D, cella: int) -> void:
 	var c: Dictionary = pista.celle[cella]

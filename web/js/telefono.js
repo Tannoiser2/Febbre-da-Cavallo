@@ -122,8 +122,8 @@ function domanda() {
     corpo = `<p class="piccolo">I numeri sono segnati sulla pista, sulla TV.</p><div class="scelte">${op.map((o) => `<button class="casella" data-k="${esc(o.k)}" ${o.ok ? '' : 'disabled'}>
       <span class="num">${esc(o.t)}</span><small>${esc(o.s || '')}</small></button>`).join('')}</div>`;
   } else if (d.tipo === 'prendi') {
-    corpo = `<div class="dadi">${op.map((o) => `<button class="dado" data-k="${esc(o.k)}" ${o.ok ? '' : 'disabled'}>${esc(o.t)}${o.v ? '<span class="pv"></span>' : ''}</button>`).join('')}</div>
-      <p class="piccolo">Il pallino verde fa pescare un token.</p>`;
+    corpo = `<div class="dadi">${op.map((o) => `<button class="dado ${o.e ? 'doppio' : ''}" data-k="${esc(o.k)}" ${o.ok ? '' : 'disabled'}>${o.e ? `+${o.n}<br>-${o.n}` : '+' + esc(o.n)}${o.v ? '<span class="pv"></span>' : ''}</button>`).join('')}</div>
+      <p class="piccolo">Il pallino verde fa pescare un token; con +N -N puoi anche tornare indietro.</p>`;
   } else if (d.tipo === 'pila') {
     corpo = `<div class="scelte quattro">${op.map((o) => `<button data-k="${esc(o.k)}" ${o.ok ? '' : 'disabled'}>${esc(o.t.replace('Pila ', ''))}</button>`).join('')}</div>`;
   } else {

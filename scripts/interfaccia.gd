@@ -38,6 +38,7 @@ var sala_giocatori: GridContainer
 var sala_conteggio: Label
 var sala_parti: Button
 var sala_bot: Button
+var sala_riprendi: Button
 var sala_opzioni := {}
 var pile_box: Control
 var pile_celle := []
@@ -301,8 +302,9 @@ func _dado_widget(f: Dictionary) -> Control:
 	p.add_theme_stylebox_override("panel", stile(Color("#fbf6e9"), Color("#3a2a1a"), 26, 5))
 	p.pivot_offset = Vector2(75, 75)
 	box.add_child(p)
-	var l := etichetta(str(f["n"]), f_titolo, 112, SCURO)
+	var l := etichetta("", f_titolo, 84, SCURO)
 	l.name = "N"
+	_testo_dado(l, f)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.position = Vector2(0, 0)
@@ -328,6 +330,15 @@ func _dado_widget(f: Dictionary) -> Control:
 	box.add_child(chi)
 	return box
 
+func _testo_dado(l: Label, f: Dictionary) -> void:
+	if f.get("e", false):
+		l.text = "+%d\n-%d" % [f["n"], f["n"]]
+		l.add_theme_font_size_override("font_size", 58)
+		l.add_theme_constant_override("line_spacing", -14)
+	else:
+		l.text = "+%d" % f["n"]
+		l.add_theme_font_size_override("font_size", 84)
+
 func mostra_dadi(facce: Array, suono: Callable) -> void:
 	for c in dadi_box.get_children():
 		c.queue_free()
@@ -348,8 +359,9 @@ func mostra_dadi(facce: Array, suono: Callable) -> void:
 				return
 			var p: Control = ws[i].get_node("Faccia")
 			p.rotation = randf_range(-0.6, 0.6) * (1.0 - k / 14.0)
-			(p.get_node("N") as Label).text = str(Dati.DADO[randi() % Dati.DADO.size()]["n"]) if k < 13 else str(facce[i]["n"])
-			p.get_node("V").visible = (randf() < 0.5) if k < 13 else facce[i].get("v", false)
+			var fc: Dictionary = Dati.DADO[randi() % Dati.DADO.size()] if k < 13 else facce[i]
+			_testo_dado(p.get_node("N") as Label, fc)
+			p.get_node("V").visible = fc.get("v", false)
 		suono.call()
 		await get_tree().create_timer(0.06 + k * 0.008).timeout
 	for w in ws:
@@ -484,11 +496,16 @@ func _crea_sala() -> void:
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 16)
 	dx.add_child(hb)
-	sala_parti = bottone("SI PARTE!", 54, Color("#1d7a3a"))
-	sala_parti.custom_minimum_size = Vector2(340, 90)
+	sala_parti = bottone("NUOVA CORSA!", 50, Color("#1d7a3a"))
+	sala_parti.custom_minimum_size = Vector2(320, 90)
 	sala_parti.disabled = true
 	sala_parti.pressed.connect(func(): comando.emit("parti", null))
 	hb.add_child(sala_parti)
+	sala_riprendi = bottone("RIPRENDI", 36, Color("#3d5a80"))
+	sala_riprendi.custom_minimum_size = Vector2(0, 90)
+	sala_riprendi.visible = false
+	sala_riprendi.pressed.connect(func(): comando.emit("riprendi", null))
+	hb.add_child(sala_riprendi)
 	sala_bot = bottone("+ giocatore finto", 26, Color("#7a6a5a"))
 	sala_bot.pressed.connect(func(): comando.emit("bot", null))
 	hb.add_child(sala_bot)

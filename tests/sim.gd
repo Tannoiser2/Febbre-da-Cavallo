@@ -16,6 +16,21 @@ func _init() -> void:
 		print("pista %d rettilinei: caselle per corsia %s, lunghezza %.1f" % [r, str(tot), p.lunghezza])
 		for c in p.celle:
 			assert(p.adiacenti[c["id"]].size() >= 2, "casella isolata")
+	# un giocatore per giro: in ogni blocco di 4 estrazioni escono tutti e 4
+	var mg := Motore.new()
+	for g in 4:
+		mg.aggiungi_giocatore("p%d" % g, "P%d" % g)
+	for blocco in 30:
+		var visti := {}
+		for k in 4:
+			var u := mg.estrai_giocatore()
+			mg.giro.append(u)
+			mg.ultimo_uid = u
+			assert(not visti.has(u), "giocatore ripetuto nel giro")
+			if visti.has(u):
+				_err += 1
+			visti[u] = true
+	print("giri senza ripetizioni: ok")
 	var turni := []
 	var vinc := {}
 	var errori := 0
