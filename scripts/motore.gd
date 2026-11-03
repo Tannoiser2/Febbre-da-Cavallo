@@ -33,6 +33,7 @@ var n_corsa := 0
 var n_turno := 0
 var salta_prossimo := false
 var in_corsa_dado := false
+var corsa_per_tutti := false   # il "?" chiede la corsa al dado per tutti i giocatori, alla fine del turno
 var giro := []              # chi ha già giocato in questo giro (si ricomincia quando hanno giocato tutti)
 var ultimo_uid := ""
 var di_turno := ""          # uid di chi sta giocando ora
@@ -92,6 +93,7 @@ func prepara_corsa() -> void:
 	salta_prossimo = false
 	ultimo_uid = ""
 	giro = []
+	corsa_per_tutti = false
 	di_turno = ""
 	dado_attuale = []
 	risultati = []
@@ -193,6 +195,9 @@ func gioca_turno() -> void:
 		cambiato.emit()
 		await v.dado([faccia])
 		await esegui_mossa(uid, faccia)
+	while corsa_per_tutti and vincitore < 0:
+		corsa_per_tutti = false
+		await corsa_al_dado(true)
 	di_turno = ""
 	dado_attuale = []
 	cambiato.emit()
@@ -220,8 +225,8 @@ func estrai_giocatore(escludi := [], tutti := false) -> String:
 func _corsa_al_dado_ora() -> bool:
 	return cfg["corsa_dado"] and giocatori.size() >= 3 and n_turno >= 3 and not salta_prossimo and randf() < 0.22
 
-func corsa_al_dado() -> void:
-	var k := 2 if giocatori.size() <= 5 else 3
+func corsa_al_dado(tutti := false) -> void:
+	var k := (2 if giocatori.size() <= 5 else 3) if not tutti else giocatori.size()
 	var facce := []
 	for i in k:
 		facce.append(Dati.DADO[randi() % Dati.DADO.size()])
@@ -231,7 +236,7 @@ func corsa_al_dado() -> void:
 	dado_attuale = facce
 	in_corsa_dado = true
 	cambiato.emit()
-	await v.dici(Dati.frase("corsa_dado"), "sorpreso")
+	await v.dici("Corsa al dado per tutti! Veloci col dito!" if tutti else Dati.frase("corsa_dado"), "sorpreso")
 	await v.dado(facce)
 	await v.estrazione_multipla(scelti)
 	var liberi := scelti.duplicate()
@@ -453,10 +458,6 @@ func risolvi_casella(uid: String, cid: int, verde: bool, origine: int, prof: int
 	await v.token_rivela(tipo, tc, esistente)
 	await v.dici(Dati.TOKEN[tipo]["nome"] + "! " + Dati.TOKEN[tipo]["testo"], "sussurra")
 	var efficace := tipo
-	if tipo == "sorpresa":
-		var altri := Dati.TOKEN.keys().filter(func(t): return t != "sorpresa" and t != "allarme")
-		efficace = altri[randi() % altri.size()]
-		await v.dici("La sorpresa è... " + Dati.TOKEN[efficace]["nome"] + "! " + Dati.TOKEN[efficace]["testo"], "occhiolino")
 	if not esistente and tipo != "allarme":
 		token[tc] = tipo
 	elif not esistente:
@@ -566,6 +567,16 @@ func applica(uid: String, cid: int, tipo: String, origine: int, prof: int, cella
 			await v.dici(Dati.nome(cid) + " torna da dove era partito!", "sorpreso")
 			# di regola il token della casella di partenza non conta; con l'effetto multiplo sì
 			await _catena(uid, cid, da, prof, visti)
+		"sorpresa":
+			# il punto interrogativo: nuovo giro, tutti i cavalli Attivi e corsa al dado per tutti
+			for x in cavalli:
+				if not x["zoppo"]:
+					x["attivo"] = true
+			giro = []
+			corsa_per_tutti = true
+			cambiato.emit()
+			await v.aggiorna()
+			await v.dici("Nuovo giro! Tutti i cavalli rialzano la testa e alla fine del turno corsa al dado per tutti!", "festeggia")
 		"salta":
 			salta_prossimo = true
 			await v.dici("Il prossimo giocatore estratto salterà il turno!", "occhiolino")

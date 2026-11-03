@@ -42,7 +42,7 @@ const TOKEN := {
 	"salta": {"n": 1, "nome": "Salta il turno", "testo": "Il prossimo giocatore salta il turno."},
 	"azzoppato": {"n": 1, "nome": "Azzoppato", "testo": "Il cavallo esce dalla pista per un turno."},
 	"allarme": {"n": 1, "nome": "Spazzata", "testo": "Via tutti i token dietro l'ultimo cavallo."},
-	"sorpresa": {"n": 2, "nome": "Sorpresa", "testo": "Un effetto a caso!"},
+	"sorpresa": {"n": 2, "nome": "Nuovo giro", "testo": "Tutti i cavalli si rialzano e c'è la corsa al dado per tutti!"},
 }
 
 const VALORI_TALLONCINI := [1, 2, 3, 4, 5]

@@ -54,7 +54,7 @@ I telefoni aprono `telefono.html` dal QR code, oppure scrivono il codice di 4 le
 | Salta il turno | 1 | il prossimo giocatore estratto salta il turno |
 | Azzoppato | 1 | il cavallo esce dalla pista e rientra al turno dopo, Disattivo |
 | Spazzata (!) | 1 | tornano nel sacchetto lei e tutti i token dietro l'ultimo cavallo |
-| Sorpresa (?) | 2 | un effetto a caso tra gli altri |
+| Nuovo giro (?) | 2 | tutti i cavalli tornano Attivi, si apre un nuovo giro e a fine turno c'è la corsa al dado per tutti i giocatori |
 
 I token restano sulla pista: tornano nel sacchetto solo quelli dietro l'ultimo cavallo quando esce la Spazzata (!),
 e la Volata a tre e l'Azzoppato quando un cavallo ci capita sopra.
@@ -67,7 +67,6 @@ rientra Disattivo al turno successivo. Nella sala d'attesa si sceglie anche la v
 
 **Scelte fatte dove il regolamento non lo dice** (si cambiano facilmente in `scripts/dati.gd`):
 - le quantità dei token sono quelle della tabella qui sopra;
-- il token *?* (non descritto nel regolamento) è diventato *Sorpresa*: un effetto a caso.
 
 ## Comandi sulla TV
 
