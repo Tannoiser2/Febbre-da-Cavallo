@@ -51,16 +51,16 @@ func _ready() -> void:
 	ui.mostra_sala(true)
 	ui.aggiorna_sala(m)
 	ui.aggiorna_classifica(m)
+	ui.aggiorna_sacchetto(m)
 	if rete.web:
+		# ogni volta che si apre la TV la stanza è nuova (codice nuovo): i telefoni della serata
+		# precedente restano fuori. Solo "Riprendi" torna alla stanza della corsa interrotta.
 		_salvata = rete.carica("fdc_partita")
-		var cod := ""
 		if _salvata != "":
 			var s = JSON.parse_string(_salvata)
-			if s is Dictionary and s.get("fase", "") == "corsa":
-				cod = s.get("codice", "")
-			else:
+			if not (s is Dictionary and s.get("fase", "") == "corsa"):
 				_salvata = ""
-		rete.avvia(cod)
+		rete.avvia("")
 		if _salvata != "":
 			ui.sala_riprendi.visible = true
 			ui.sala_riprendi.text = "RIPRENDI LA CORSA\nINTERROTTA"
@@ -147,8 +147,17 @@ func _comando(nome: String, valore) -> void:
 					m.cfg["corsa_dado"] = bool(v)
 				"velocita":
 					imposta_velocita(float(v))
+				"cattiva":
+					m.cfg["cattiva"] = bool(v)
 			_sporco = true
 			ui.aggiorna_classifica(m)
+		"sacchetto":
+			var t: String = valore[0]
+			if t == "":
+				m.cfg["sacchetto"] = {}
+			else:
+				m.cfg["sacchetto"][t] = clampi(m.quanti_token(t) + int(valore[1]), 0, 6)
+			ui.aggiorna_sacchetto(m)
 		"voce":
 			vista.voce_attiva = not vista.voce_attiva
 			rete.voce(vista.voce_attiva)
@@ -187,6 +196,12 @@ func _riprendi() -> void:
 	if not (s is Dictionary):
 		return
 	_in_gioco = true
+	var cod: String = s.get("codice", "")
+	if cod != "":
+		rete.avvia(cod)
+		var t0 := Time.get_ticks_msec()
+		while rete.codice != cod and Time.get_ticks_msec() - t0 < 8000:
+			await get_tree().process_frame
 	m.carica(s["motore"])
 	if m.cfg.has("velocita"):
 		imposta_velocita(float(m.cfg["velocita"]))

@@ -38,6 +38,9 @@ func _init() -> void:
 		var m := Motore.new()
 		m.cfg["rettilinei"] = [2, 4, 6][i % 3]
 		m.cfg["token_sempre"] = i % 2 == 0
+		m.cfg["cattiva"] = i % 4 < 2
+		if i % 5 == 0:
+			m.cfg["sacchetto"] = {"piu3": 4, "indietro": 4, "tre": 3, "azzoppato": 3, "allarme": 0}
 		m.v = VistaVuota.new()
 		var io := IOBot.new()
 		io.motore = m
@@ -79,6 +82,6 @@ func _controlla(m: Motore) -> void:
 				print("due cavalli sulla casella ", c["cella"], " ", m.registro.slice(-6))
 			occ[c["cella"]] = true
 	var n: int = m.sacchetto.size() + m.token.size() + m.in_mano
-	if n != 20:
+	if n != m.sacchetto_iniziale().size():
 		_err += 1
-		print("token: %d invece di 20 " % n, m.registro.slice(-4))
+		print("token: %d invece di %d " % [n, m.sacchetto_iniziale().size()], m.registro.slice(-4))

@@ -17,6 +17,8 @@ var cfg := {
 	"posta": 15.0,          # euro a testa per corsa
 	"token_sempre": false,  # true: i token sulla pista scattano anche senza pallino verde
 	"corsa_dado": true,     # a volte più dadi e corsa a prenderli
+	"cattiva": false,       # effetto multiplo: se un token porta il cavallo su un altro token, scatta anche quello
+	"sacchetto": {},        # quanti token di ogni tipo (vuoto = quelli del gioco)
 }
 
 # stato
@@ -39,7 +41,7 @@ var domanda := {}           # domanda in corso (per i telefoni)
 var risultati := []         # alla fine: {uid, nome, quote, premio, talloncini}
 var _pid := 0
 var registro := []          # ultime cose successe (per i test)
-var in_mano := 0            # token tolto dalla pista mentre si sceglie dove rimetterlo
+var in_mano := 0            # token pescato non ancora rimesso a posto (per i controlli dei test)
 
 func _init() -> void:
 	pista = Pista.new(cfg["rettilinei"])
@@ -83,7 +85,7 @@ func prepara_corsa() -> void:
 	for i in 8:
 		cavalli.append({"id": i, "cella": Pista.PARTENZA, "attivo": true, "zoppo": false, "cella_zoppo": -1})
 	token = {}
-	sacchetto = Dati.sacchetto_pieno()
+	sacchetto = sacchetto_iniziale()
 	sacchetto.shuffle()
 	vincitore = -1
 	n_turno = 0
@@ -105,6 +107,16 @@ func prepara_corsa() -> void:
 		perm.shuffle()
 		for p in 8:
 			pile[p].append({"c": perm[p], "q": q})
+
+func quanti_token(t: String) -> int:
+	return int(cfg["sacchetto"].get(t, Dati.TOKEN[t]["n"]))
+
+func sacchetto_iniziale() -> Array:
+	var l := []
+	for t in Dati.TOKEN:
+		for i in quanti_token(t):
+			l.append(t)
+	return l
 
 ## Una corsa intera: pile, partenza, turni fino al traguardo, svelamento.
 func gioca_corsa() -> void:
@@ -412,40 +424,20 @@ func token_nella_colonna(cella: int, ignora := -99) -> int:
 			return c
 	return -1
 
-## Dove si può spostare un token già in pista: la colonna subito avanti o subito dietro (se libere).
-## Si resta nella stessa corsia quando si può.
-func _vicine_per_token(tc: int) -> Array:
-	var avanti := -1
-	var dietro := -1
-	var s0: float = pista.celle[tc]["s"]
-	for a in pista.adiacenti[tc]:
-		if pista.colonna[tc].has(a) or token_nella_colonna(a, tc) >= 0:
-			continue
-		var ds: float = pista.celle[a]["s"] - s0
-		if ds > pista.lunghezza / 2.0:
-			ds -= pista.lunghezza
-		elif ds < -pista.lunghezza / 2.0:
-			ds += pista.lunghezza
-		var stessa: bool = pista.celle[a]["corsia"] == pista.celle[tc]["corsia"]
-		if ds > 0 and (avanti < 0 or stessa):
-			avanti = a
-		elif ds < 0 and (dietro < 0 or stessa):
-			dietro = a
-	var l := []
-	if avanti >= 0:
-		l.append(avanti)
-	if dietro >= 0:
-		l.append(dietro)
-	return l
-
-func risolvi_casella(uid: String, cid: int, verde: bool, origine: int, prof: int) -> void:
+## Un cavallo arriva in una colonna: se c'è un token (o col pallino verde se ne pesca uno) scatta l'effetto.
+## I token restano sulla pista; tornano nel sacchetto solo la Volata a tre e l'Azzoppato quando un cavallo
+## ci capita sopra, e quelli dietro l'ultimo cavallo con la Spazzata.
+## "visti": i token già scattati in questa catena (opzione cattiva), così ognuno vale una volta sola.
+func risolvi_casella(uid: String, cid: int, verde: bool, origine: int, prof: int, visti := {}) -> void:
 	var cella: int = cavalli[cid]["cella"]
-	if cella < 0 or prof > 3:
+	if cella < 0 or prof > 12 or cavalli[cid]["zoppo"]:
 		return
 	var tipo := ""
 	var esistente := false
 	var tc := token_nella_colonna(cella)
 	if tc >= 0:
+		if visti.has(tc):
+			return
 		if verde or cfg["token_sempre"] or prof > 0:
 			tipo = token[tc]
 			esistente = true
@@ -456,6 +448,7 @@ func risolvi_casella(uid: String, cid: int, verde: bool, origine: int, prof: int
 		tc = cella
 	if tipo == "":
 		return
+	visti[tc] = true
 	_log("token %s %s su %d" % [tipo, "esistente" if esistente else "pescato", tc])
 	await v.token_rivela(tipo, tc, esistente)
 	await v.dici(Dati.TOKEN[tipo]["nome"] + "! " + Dati.TOKEN[tipo]["testo"], "sussurra")
@@ -464,37 +457,34 @@ func risolvi_casella(uid: String, cid: int, verde: bool, origine: int, prof: int
 		var altri := Dati.TOKEN.keys().filter(func(t): return t != "sorpresa" and t != "allarme")
 		efficace = altri[randi() % altri.size()]
 		await v.dici("La sorpresa è... " + Dati.TOKEN[efficace]["nome"] + "! " + Dati.TOKEN[efficace]["testo"], "occhiolino")
-	# dove va il token dopo l'effetto
-	if not esistente:
-		if tipo != "allarme":
-			token[tc] = tipo
-	await applica(uid, cid, efficace, origine, prof, tc)
-	if esistente and token.get(tc, "") == tipo:
-		if tipo in ["tre", "azzoppato", "allarme"]:
-			token.erase(tc)
-			sacchetto.append(tipo)
-			sacchetto.shuffle()
-			await v.token_via([tc])
-		else:
-			var libere := _vicine_per_token(tc)
-			token.erase(tc)
-			in_mano = 1
-			if libere.is_empty():
-				sacchetto.append(tipo)
-				sacchetto.shuffle()
-				in_mano = 0
-				await v.token_via([tc])
-			else:
-				var dove: int = libere[0]
-				if libere.size() > 1:
-					dove = await chiedi_casella(uid, "Dove sposti il token " + Dati.TOKEN[tipo]["nome"] + "?", libere, tc, {"scopo": "sposta_token", "token": tipo})
-				token[dove] = tipo
-				in_mano = 0
-				await v.token_sposta(tc, dove, tipo)
+	if not esistente and tipo != "allarme":
+		token[tc] = tipo
+	elif not esistente:
+		in_mano = 1   # la Spazzata pescata è in mano finché non torna nel sacchetto
+	elif esistente and tipo in ["tre", "azzoppato"]:
+		token.erase(tc)
+		sacchetto.append(tipo)
+		sacchetto.shuffle()
+		await v.token_via([tc])
+	cambiato.emit()
+	await applica(uid, cid, efficace, origine, prof, tc, visti)
 	cambiato.emit()
 	await v.aggiorna()
 
-func applica(uid: String, cid: int, tipo: String, origine: int, prof: int, cella_token: int) -> void:
+## Opzione cattiva: dopo uno spostamento dovuto a un token, se il cavallo è finito su un altro token scatta anche quello
+func _catena(uid: String, cid: int, origine: int, prof: int, visti: Dictionary) -> void:
+	if not cfg["cattiva"] or vincitore >= 0:
+		return
+	var c: Dictionary = cavalli[cid]
+	if c["zoppo"] or c["cella"] < 0:
+		return
+	var tc := token_nella_colonna(c["cella"])
+	if tc < 0 or visti.has(tc):
+		return
+	await v.dici("Effetto multiplo! Un altro token...", "sorpreso")
+	await risolvi_casella(uid, cid, false, origine, prof + 1, visti)
+
+func applica(uid: String, cid: int, tipo: String, origine: int, prof: int, cella_token: int, visti := {}) -> void:
 	var c: Dictionary = cavalli[cid]
 	match tipo:
 		"piu1", "piu2", "piu3":
@@ -506,10 +496,12 @@ func applica(uid: String, cid: int, tipo: String, origine: int, prof: int, cella
 			var da: int = c["cella"]
 			var dest := await chiedi_destinazione(uid, cid, d, "Dove si ferma " + Dati.nome(cid) + "?")
 			await muovi(cid, da, dest, d, true)
-			if vincitore < 0 and dest >= 0 and token_nella_colonna(dest) >= 0 and cfg["token_sempre"]:
-				await risolvi_casella(uid, cid, false, da, prof + 1)
+			await _catena(uid, cid, da, prof, visti)
 		"supera":
+			var da: int = c["cella"]
 			await _supera(uid, cid)
+			if c["cella"] != da:
+				await _catena(uid, cid, da, prof, visti)
 		"attiva":
 			var scelte := []
 			for x in cavalli:
@@ -559,6 +551,9 @@ func applica(uid: String, cid: int, tipo: String, origine: int, prof: int, cella
 				await muovi(k, da, dest, d2, true)
 				if vincitore >= 0:
 					return
+				await _catena(uid, k, da, prof, visti)
+				if vincitore >= 0:
+					return
 		"indietro":
 			if origine == c["cella"]:
 				return
@@ -569,6 +564,8 @@ func applica(uid: String, cid: int, tipo: String, origine: int, prof: int, cella
 			c["cella"] = origine
 			await v.muovi(cid, [da, origine], da)
 			await v.dici(Dati.nome(cid) + " torna da dove era partito!", "sorpreso")
+			# di regola il token della casella di partenza non conta; con l'effetto multiplo sì
+			await _catena(uid, cid, da, prof, visti)
 		"salta":
 			salta_prossimo = true
 			await v.dici("Il prossimo giocatore estratto salterà il turno!", "occhiolino")
@@ -593,6 +590,7 @@ func applica(uid: String, cid: int, tipo: String, origine: int, prof: int, cella
 				sacchetto.append(token[t])
 				token.erase(t)
 			sacchetto.append("allarme")
+			in_mano = 0
 			sacchetto.shuffle()
 			await v.token_via(via)
 			await v.dici("Spazzata! %d token tornano nel sacchetto." % (via.size() + 1), "ride")

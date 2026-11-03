@@ -56,8 +56,11 @@ I telefoni aprono `telefono.html` dal QR code, oppure scrivono il codice di 4 le
 | Spazzata (!) | 1 | tornano nel sacchetto lei e tutti i token dietro l'ultimo cavallo |
 | Sorpresa (?) | 2 | un effetto a caso tra gli altri |
 
-Un token pescato resta sulla sua colonna; un token già in pista, dopo l'effetto, si sposta sulla colonna subito
-avanti o subito dietro, a scelta del giocatore (Volata a tre, Azzoppato e Spazzata tornano invece nel sacchetto).
+I token restano sulla pista: tornano nel sacchetto solo quelli dietro l'ultimo cavallo quando esce la Spazzata (!),
+e la Volata a tre e l'Azzoppato quando un cavallo ci capita sopra.
+Nella sala d'attesa, **Sacchetto** sceglie quanti token di ogni tipo ci sono (*Come nel gioco* rimette la tabella
+qui sopra) e **Effetto multiplo** attiva la versione cattiva: se un token porta un cavallo (avanti o indietro) su un
+altro token, scatta anche quello, e così via; ogni token vale una volta sola per catena, così non si gira all'infinito.
 Sulla TV i token stanno sul prato, fuori dal bordo esterno, all'altezza della loro colonna (colorata d'azzurro).
 I cavalli Disattivi diventano grigi; il cavallo azzoppato si accascia a lato della pista col muso a terra e
 rientra Disattivo al turno successivo. Nella sala d'attesa si sceglie anche la velocità: lenta, normale, veloce.
@@ -71,7 +74,8 @@ rientra Disattivo al turno successivo. Nella sala d'attesa si sceglie anche la v
 In alto a sinistra: **Schermo intero**, **Voce sì/no**, **Decidi tu** (se qualcuno si è addormentato: la TV
 sceglie al suo posto; lo fa comunque da sola dopo 90 secondi, 25 nella corsa al dado). Se la TV si ricarica,
 nella sala d'attesa compare **Riprendi la corsa interrotta** accanto a **Nuova corsa!**: si riparte dall'ultimo
-turno con la stessa stanza, oppure si ricomincia da capo.
+turno con la stanza e i telefoni di prima, oppure si ricomincia da capo. Ogni volta che si apre la TV la stanza ha
+un **codice nuovo**: i telefoni della volta precedente restano fuori.
 
 ## Consigli per la serata
 

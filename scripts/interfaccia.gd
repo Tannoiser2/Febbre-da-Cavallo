@@ -42,6 +42,9 @@ var sala_conteggio: Label
 var sala_parti: Button
 var sala_bot: Button
 var sala_riprendi: Button
+var bt_sacchetto: Button
+var sacchetto_box: Control
+var sacchetto_righe := {}
 var sala_opzioni := {}
 var pile_box: Control
 var pile_celle := []
@@ -526,7 +529,18 @@ func _crea_sala() -> void:
 	_opzione(dx, "posta", "Posta a testa", [["15 euro", 15.0], ["3 euro", 3.0], ["1,50 euro", 1.5], ["per gioco", 0.0]], 15.0)
 	_opzione(dx, "token", "Token sulla pista", [["col pallino verde", false], ["sempre", true]], false)
 	_opzione(dx, "corsa_dado", "Corsa al dado", [["sì", true], ["no", false]], true)
+	_opzione(dx, "cattiva", "Effetto multiplo", [["no", false], ["sì, versione cattiva", true]], false)
 	_opzione(dx, "velocita", "Velocità di gioco", [["lenta", 0.7], ["normale", 1.0], ["veloce", 1.8]], 1.0)
+	var rs := HBoxContainer.new()
+	rs.add_theme_constant_override("separation", 8)
+	var ls := etichetta("Sacchetto", f_testo, 28, SCURO)
+	ls.custom_minimum_size = Vector2(200, 0)
+	rs.add_child(ls)
+	bt_sacchetto = bottone("20 token: cambia", 24, Color("#a08c74"))
+	bt_sacchetto.pressed.connect(func(): sacchetto_box.visible = true)
+	rs.add_child(bt_sacchetto)
+	dx.add_child(rs)
+	_crea_sacchetto()
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 16)
 	dx.add_child(hb)
@@ -565,6 +579,77 @@ func _opzione(dove: Control, chiave: String, titolo: String, valori: Array, iniz
 		r.add_child(b)
 	sala_opzioni[chiave] = bs
 	dove.add_child(r)
+
+## Finestra per scegliere quanti token di ogni tipo ci sono nel sacchetto
+func _crea_sacchetto() -> void:
+	sacchetto_box = ColorRect.new()
+	(sacchetto_box as ColorRect).color = Color(0, 0, 0, 0.5)
+	sacchetto_box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sacchetto_box.visible = false
+	sala.add_child(sacchetto_box)
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", stile(CREMA, ROSSO, 26, 7))
+	p.anchor_left = 0.5
+	p.anchor_right = 0.5
+	p.anchor_top = 0.5
+	p.anchor_bottom = 0.5
+	p.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	p.grow_vertical = Control.GROW_DIRECTION_BOTH
+	sacchetto_box.add_child(p)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 10)
+	p.add_child(v)
+	var t := etichetta("I TOKEN NEL SACCHETTO", f_titolo, 46, ROSSO)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	var g := GridContainer.new()
+	g.columns = 2
+	g.add_theme_constant_override("h_separation", 40)
+	g.add_theme_constant_override("v_separation", 6)
+	v.add_child(g)
+	for tipo in Dati.TOKEN:
+		var r := HBoxContainer.new()
+		r.add_theme_constant_override("separation", 10)
+		var ic := TextureRect.new()
+		ic.texture = load("res://assets/token/%s.png" % tipo)
+		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ic.custom_minimum_size = Vector2(54, 54)
+		r.add_child(ic)
+		var n := etichetta(Dati.TOKEN[tipo]["nome"], f_testo, 28, SCURO)
+		n.custom_minimum_size = Vector2(190, 0)
+		r.add_child(n)
+		var meno := bottone("-", 30, Color("#a08c74"))
+		meno.custom_minimum_size = Vector2(54, 50)
+		meno.pressed.connect(func(): comando.emit("sacchetto", [tipo, -1]))
+		r.add_child(meno)
+		var q := etichetta("0", f_titolo, 36, SCURO)
+		q.custom_minimum_size = Vector2(44, 0)
+		q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		r.add_child(q)
+		var piu := bottone("+", 30, Color("#a08c74"))
+		piu.custom_minimum_size = Vector2(54, 50)
+		piu.pressed.connect(func(): comando.emit("sacchetto", [tipo, 1]))
+		r.add_child(piu)
+		g.add_child(r)
+		sacchetto_righe[tipo] = q
+	var hb := HBoxContainer.new()
+	hb.alignment = BoxContainer.ALIGNMENT_CENTER
+	hb.add_theme_constant_override("separation", 24)
+	var rip := bottone("Come nel gioco", 28, Color("#7a6a5a"))
+	rip.pressed.connect(func(): comando.emit("sacchetto", ["", 0]))
+	hb.add_child(rip)
+	var ok := bottone("FATTO", 36, Color("#1d7a3a"))
+	ok.pressed.connect(func(): sacchetto_box.visible = false)
+	hb.add_child(ok)
+	v.add_child(hb)
+
+func aggiorna_sacchetto(m: Motore) -> void:
+	var tot := 0
+	for tipo in Dati.TOKEN:
+		var q := m.quanti_token(tipo)
+		tot += q
+		(sacchetto_righe[tipo] as Label).text = str(q)
+	bt_sacchetto.text = "%d token: cambia" % tot
 
 func imposta_opzione(chiave: String, valore) -> void:
 	for b in sala_opzioni.get(chiave, []):

@@ -9,6 +9,7 @@ const parlati = {};
 let pid = 0;
 let rete = null;
 let codice = '';
+let stacca = [];   // per smettere di ascoltare la stanza precedente
 
 function base() {
   return location.href.split('?')[0].split('#')[0].replace(/index\.html$/, '');
@@ -25,8 +26,9 @@ window.FR = {
   },
   async avvia(riprendi) {
     try {
-      rete = creaRete();
-      await rete.init();
+      if (!rete) { rete = creaRete(); await rete.init(); }
+      for (const f of stacca) { try { f(); } catch (e) { /* ok */ } }
+      stacca = [];
       let c = '';
       if (riprendi) {
         const h = await rete.get(`${RADICE}/${riprendi}/host`);
@@ -44,17 +46,17 @@ window.FR = {
       codice = c;
       const url = base() + 'telefono.html?s=' + c + (q.get('rete') === 'locale' ? '&rete=locale' : '');
       coda.push({ e: 'stanza', codice: c, url });
-      rete.onFigli(`${RADICE}/${c}/giocatori`, {
+      stacca.push(rete.onFigli(`${RADICE}/${c}/giocatori`, {
         aggiunto: (k, v) => coda.push({ e: 'entra', uid: k, nome: v?.nome || '' }),
         cambiato: (k, v) => coda.push({ e: 'entra', uid: k, nome: v?.nome || '' }),
         tolto: (k) => coda.push({ e: 'esce', uid: k }),
-      });
-      rete.onFigli(`${RADICE}/${c}/azioni`, {
+      }));
+      stacca.push(rete.onFigli(`${RADICE}/${c}/azioni`, {
         aggiunto: (k, v) => {
           if (v && v.da) coda.push({ e: 'azione', uid: v.da, p: v.p, k: v.k });
-          rete.remove(`${RADICE}/${c}/azioni/${k}`);
+          if (c === codice) rete.remove(`${RADICE}/${c}/azioni/${k}`);
         },
-      });
+      }));
     } catch (e) {
       console.error(e);
       coda.push({ e: 'errore', msg: String(e?.message || e) });
