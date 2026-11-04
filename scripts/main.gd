@@ -52,6 +52,7 @@ func _ready() -> void:
 	ui.aggiorna_sala(m)
 	ui.aggiorna_classifica(m)
 	ui.aggiorna_sacchetto(m)
+	ui.aggiorna_mazzo(m)
 	if rete.web:
 		# ogni volta che si apre la TV la stanza è nuova (codice nuovo): i telefoni della serata
 		# precedente restano fuori. Solo "Riprendi" torna alla stanza della corsa interrotta.
@@ -130,6 +131,25 @@ func _comando(nome: String, valore) -> void:
 		"riprendi":
 			if _salvata != "" and not _in_gioco:
 				_riprendi()
+		"togli_bot":
+			if m.fase == "attesa":
+				for g in m.giocatori.duplicate():
+					if g["bot"]:
+						m.togli_giocatore(g["uid"])
+				_n_bot = 0
+				ui.aggiorna_sala(m)
+				ui.aggiorna_giro(m)
+		"carta":
+			var escl: Array = m.cfg.get("carte_escluse", []).duplicate()
+			var k := int(valore)
+			if k < 0:
+				escl = []
+			elif escl.has(k):
+				escl.erase(k)
+			elif escl.size() < Dati.CARTE.size() - 4:
+				escl.append(k)
+			m.cfg["carte_escluse"] = escl
+			ui.aggiorna_mazzo(m)
 		"bot":
 			if m.fase == "attesa":
 				_aggiungi_bot()
@@ -139,7 +159,7 @@ func _comando(nome: String, valore) -> void:
 			match k:
 				"pista":
 					m.cfg["rettilinei"] = int(v)
-					m.pista = Pista.new(int(v))
+					m.pista = m.nuova_pista()
 					ip.costruisci(m.pista)
 				"posta":
 					m.cfg["posta"] = float(v)
@@ -151,6 +171,17 @@ func _comando(nome: String, valore) -> void:
 					imposta_velocita(float(v))
 				"cattiva":
 					m.cfg["cattiva"] = bool(v)
+				"versione":
+					m.cfg["versione"] = str(v)
+					ui.imposta_opzione("versione", str(v))
+					m.pista = m.nuova_pista()
+					ip.costruisci(m.pista)
+					if str(v) == "carte" and m.cfg["posta"] == 15.0:
+						m.cfg["posta"] = 10.0
+					elif str(v) == "token" and m.cfg["posta"] == 10.0:
+						m.cfg["posta"] = 15.0
+					ui.imposta_opzione("posta", m.cfg["posta"])
+					ui.mostra_opzioni_versione(str(v))
 			_sporco = true
 			ui.aggiorna_classifica(m)
 		"sacchetto":

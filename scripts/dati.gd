@@ -66,6 +66,59 @@ const TOKEN := {
 }
 
 const VALORI_TALLONCINI := [1, 2, 3, 4, 5]
+const VALORI_TALLONCINI_CARTE := [1, 2, 3, 4]
+
+## Versione con le carte: 32 carte (assets/carte/cNN.webp, la parte bassa in sNN.webp).
+## "su" = effetto quando la carta si pesca, "giu" = effetto quando un cavallo finisce nella sua colonna,
+## "scarta" = dopo l'effetto di sotto la carta lascia la pista e torna nel mazzo.
+const CARTE := [
+	{"titolo": "Via come il vento!", "su": "piu1", "giu": "piu2", "scarta": false},
+	{"titolo": "Zizzignor Conte", "su": "disattiva", "giu": "piu1", "scarta": false},
+	{"titolo": "Nervoso?", "su": "disattiva", "giu": "ultimo3", "scarta": false},
+	{"titolo": "Ciò un cavallo che vince!", "su": "piu1", "giu": "piu2", "scarta": false},
+	{"titolo": "Ci rifacciamo", "su": "attiva", "giu": "ultimo2", "scarta": false},
+	{"titolo": "So' rovinato!!!", "su": "rimescola", "giu": "azzoppato", "scarta": false},
+	{"titolo": "Ho un piano!", "su": "salta", "giu": "salta", "scarta": false},
+	{"titolo": "Un whisky maschio", "su": "attiva", "giu": "piu1", "scarta": false},
+	{"titolo": "È un foco de paia...", "su": "piu2", "giu": "supera", "scarta": false},
+	{"titolo": "Manzotin!", "su": "piu1", "giu": "supera", "scarta": false},
+	{"titolo": "'So un tantino preoccupato", "su": "indietro", "giu": "disattiva", "scarta": false},
+	{"titolo": "Un etto di carne", "su": "supera", "giu": "attiva", "scarta": false},
+	{"titolo": "E' 'na Mandrakata", "su": "supera", "giu": "attiva", "scarta": false},
+	{"titolo": "Sorriso maggico", "su": "piu3", "giu": "supera", "scarta": false},
+	{"titolo": "Si te pio!!!", "su": "indietro", "giu": "disattiva", "scarta": false},
+	{"titolo": "Dico! 1, 14 e 4", "su": "piu4", "giu": "piu3", "scarta": false},
+	{"titolo": "...Uragano e Apocalisse", "su": "indietro", "giu": "piu3", "scarta": true},
+	{"titolo": "Piripicchio è figlio di...", "su": "piu3", "giu": "piu1", "scarta": true},
+	{"titolo": "Cravatta giallorossa", "su": "piu1", "giu": "piu3", "scarta": true},
+	{"titolo": "Dr. Magalini", "su": "supera", "giu": "supera", "scarta": true},
+	{"titolo": "Sono... 47.500 lire", "su": "paga", "giu": "piu2", "scarta": true},
+	{"titolo": "A buffoni!!!", "su": "indietro", "giu": "azzoppato", "scarta": true},
+	{"titolo": "Sarvate Mandrà", "su": "salta", "giu": "salta", "scarta": true},
+	{"titolo": "Disperati!!!", "su": "meno2", "giu": "azzoppato", "scarta": true},
+	{"titolo": "'A tris de Gabriella", "su": "piu1", "giu": "tre", "scarta": true},
+	{"titolo": "Er Ventresca", "su": "salta", "giu": "salta", "scarta": true},
+	{"titolo": "...E lo guida Bocconi", "su": "piu4", "giu": "supera2", "scarta": true},
+	{"titolo": "Non prendere soldi", "su": "paga", "giu": "azzoppato", "scarta": true},
+	{"titolo": "Dispositivo di risposta", "su": "piu2", "giu": "riattivato", "scarta": true},
+	{"titolo": "...Manco tu che sei pratica", "su": "paga", "giu": "primo_dis", "scarta": true},
+	{"titolo": "Pora nonna", "su": "primo_dis", "giu": "salta", "scarta": true},
+	{"titolo": "'So un tantino preoccupato", "su": "meno2", "giu": "primo_dis", "scarta": true},
+]
+
+## Testo degli effetti delle carte (anche quelli in più rispetto ai token)
+const EFFETTI := {
+	"piu1": "Il cavallo avanza di 1 casella.", "piu2": "Il cavallo avanza di 2 caselle.",
+	"piu3": "Il cavallo avanza di 3 caselle.", "piu4": "Il cavallo avanza di 4 caselle.",
+	"meno2": "Il cavallo arretra di 2 caselle.", "supera": "Supera il cavallo davanti.",
+	"supera2": "Supera i due cavalli davanti.", "attiva": "Riattiva un cavallo a scelta.",
+	"disattiva": "Disattiva un cavallo a scelta.", "indietro": "Il cavallo torna dov'era.",
+	"salta": "Il prossimo giocatore salta il turno.", "azzoppato": "Il cavallo è azzoppato.",
+	"tre": "Tre cavalli a scelta avanzano di 2 caselle.", "ultimo2": "L'ultimo cavallo avanza di 2 caselle.",
+	"ultimo3": "L'ultimo cavallo avanza di 3 caselle.", "primo_dis": "Il primo cavallo viene disattivato.",
+	"riattivato": "Il cavallo resta attivo.", "rimescola": "Le carte sulla pista tornano nel mazzo.",
+	"paga": "Chi l'ha pescata paga un'altra quota al montepremi.",
+}
 const LETTERE_PILE := ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
 
 static func colore(i: int) -> Color:

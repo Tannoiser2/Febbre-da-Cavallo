@@ -118,6 +118,10 @@ func token_rivela(tipo: String, cella: int, esistente: bool) -> void:
 	rete.suono("token")
 	await ip.anima_token_rivela(tipo, cella, esistente)
 
+func carta_mostra(k: int, sotto: bool) -> void:
+	rete.suono("gira")
+	await ui.mostra_carta(k, sotto)
+
 func token_via(celle: Array) -> void:
 	await ip.anima_token_via(celle)
 

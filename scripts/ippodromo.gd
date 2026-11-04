@@ -495,6 +495,8 @@ func _alberi(_r_in: float, r_out: float) -> void:
 ## I token stanno fuori dalla pista, sul prato accanto al bordo esterno, all'altezza della loro colonna
 func pos_token(id: int) -> Vector3:
 	var r := Pista.R0 + Pista.CORSIE * Pista.LARG_CORSIA + Pista.BORDO + 1.55
+	if token_nodi.has(id) and not (token_nodi[id].get_meta("tipo") is String):
+		r = Pista.R0 + Pista.CORSIE * Pista.LARG_CORSIA + Pista.BORDO + 1.05
 	var p := pista.punto(pista.celle[id]["s"], r)
 	return Vector3(p.x, 0.02, p.y)
 
@@ -774,7 +776,26 @@ func togli_dadi_3d(nodi: Array) -> void:
 			tw.tween_callback(d.queue_free)
 
 # ------------------------------------------------------------------ token
-func _nodo_token(tipo: String) -> Node3D:
+## Carta della versione con le carte: spunta da sotto il bordo esterno, si vede la parte di sotto
+func _nodo_carta(k: int, cella: int) -> Node3D:
+	var n := Node3D.new()
+	n.set_meta("tipo", k)
+	var q := MeshInstance3D.new()
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(5.3, 2.53)
+	q.mesh = pm
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = load("res://assets/carte/s%02d.webp" % (k + 1))
+	m.roughness = 0.7
+	q.material_override = m
+	q.position.y = 0.03
+	n.add_child(q)
+	n.rotation.y = -dir_cella(cella).angle()
+	return n
+
+func _nodo_token(tipo, cella := -1) -> Node3D:
+	if not (tipo is String):
+		return _nodo_carta(int(tipo), cella)
 	var n := Node3D.new()
 	n.set_meta("tipo", tipo)
 	var d := MeshInstance3D.new()
@@ -801,11 +822,11 @@ func _nodo_token(tipo: String) -> Node3D:
 	n.add_child(q)
 	return n
 
-func metti_token(cella: int, tipo: String) -> Node3D:
-	var n := _nodo_token(tipo)
+func metti_token(cella: int, tipo) -> Node3D:
+	var n := _nodo_token(tipo, cella)
 	add_child(n)
-	n.position = pos_token(cella)
 	token_nodi[cella] = n
+	n.position = pos_token(cella)
 	return n
 
 func anima_token_rivela(tipo: String, cella: int, esistente: bool) -> void:

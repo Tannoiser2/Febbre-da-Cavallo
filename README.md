@@ -75,6 +75,20 @@ rientra Disattivo al turno successivo dei cavalli. Nella sala d'attesa si scegli
 **Scelte fatte dove il regolamento non lo dice** (si cambiano facilmente in `scripts/dati.gd`):
 - le quantità dei token sono quelle della tabella qui sopra;
 
+## La versione con le carte
+
+Nella sala d'attesa, **Token o carte**. Con le carte (32 carte del film, in `assets/carte`):
+- la pista è fatta con i pezzi di rettilineo da 3 file (come i pezzi della scatola a carte) e le curve;
+- col pallino verde, se il cavallo **non è in curva** e nella sua colonna non c'è già una carta, si pesca una carta:
+  si esegue l'effetto **di sopra**, poi la carta va sotto la pista e ne spunta solo la parte di sotto;
+- quando un cavallo finisce in una colonna con una carta, si esegue l'effetto **di sotto**; se c'è scritto
+  *Scarta dopo l'uso* la carta lascia la pista e torna nel mazzo;
+- talloncini da 1 a 4 (10 quote per cavallo), posta proposta 10 euro;
+- effetti in più rispetto ai token: ultimo cavallo +2/+3, primo cavallo disattivato, supera i due cavalli davanti,
+  cavallo -2, cavallo +4, cavallo riattivato, rimescola (le carte sulla pista tornano nel mazzo), paga un'altra
+  quota (chi ha pescato la carta paga un'altra posta, che va nel montepremi);
+- **Modifica carte** sceglie quali carte ci sono nel mazzo.
+
 ## Comandi sulla TV
 
 In alto a sinistra: **Schermo intero**, **Voce sì/no**, **Decidi tu** (se qualcuno si è addormentato: la TV

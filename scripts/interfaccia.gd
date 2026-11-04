@@ -45,6 +45,12 @@ var sala_riprendi: Button
 var bt_sacchetto: Button
 var sacchetto_box: Control
 var sacchetto_righe := {}
+var mazzo_box: Control
+var mazzo_bottoni := []
+var _versione := "token"
+var sala_togli: Button
+var _sacchetto_testo := ""
+var _mazzo_testo := ""
 var sala_opzioni := {}
 var pile_box: Control
 var pile_celle := []
@@ -230,7 +236,7 @@ func aggiorna_classifica(m: Motore) -> void:
 		r["stato"].text = m._stato_cavallo(c) if c["cella"] != Pista.TRAGUARDO else "ARRIVATO"
 		r["nome"].add_theme_color_override("font_color", SCURO if c["attivo"] else Color("#8a7a6a"))
 	if m.giocatori.size():
-		montepremi.text = "Montepremi: " + m.euro(m.cfg["posta"] * m.giocatori.size()) if m.cfg["posta"] > 0 else "Si gioca per la gloria"
+		montepremi.text = "Montepremi: " + m.euro(m.montepremi()) if m.cfg["posta"] > 0 else "Si gioca per la gloria"
 	else:
 		montepremi.text = ""
 	for c in lista_giocatori.get_children():
@@ -675,9 +681,9 @@ func _crea_sala() -> void:
 	dx.add_child(sala_giocatori)
 	dx.add_child(HSeparator.new())
 	dx.add_child(etichetta("REGOLE DELLA CASA", f_titolo, 34, ROSSO))
+	_opzione(dx, "versione", "Token o carte", [["token", "token"], ["carte", "carte"]], "token")
 	_opzione(dx, "pista", "Pista", [["corta", 2], ["media", 4], ["lunga", 6]], 4)
-	_opzione(dx, "posta", "Posta a testa", [["15 euro", 15.0], ["3 euro", 3.0], ["1,50 euro", 1.5], ["per gioco", 0.0]], 15.0)
-	_opzione(dx, "token", "Token sulla pista", [["col pallino verde", false], ["sempre", true]], false)
+	_opzione(dx, "posta", "Posta a testa", [["15 euro", 15.0], ["10 euro", 10.0], ["3 euro", 3.0], ["1,50 euro", 1.5], ["per gioco", 0.0]], 15.0)
 	_opzione(dx, "corsa_dado", "Corsa al dado", [["sì", true], ["no", false]], true)
 	_opzione(dx, "cattiva", "Effetto multiplo", [["no", false], ["sì, versione cattiva", true]], false)
 	_opzione(dx, "velocita", "Velocità di gioco", [["lenta", 0.7], ["normale", 1.0], ["veloce", 1.8]], 1.0)
@@ -686,11 +692,16 @@ func _crea_sala() -> void:
 	var ls := etichetta("Sacchetto", f_testo, 28, SCURO)
 	ls.custom_minimum_size = Vector2(200, 0)
 	rs.add_child(ls)
-	bt_sacchetto = bottone("20 token: cambia", 24, Color("#a08c74"))
-	bt_sacchetto.pressed.connect(func(): sacchetto_box.visible = true)
+	bt_sacchetto = bottone("Modifica sacchetto (20 token)", 24, Color("#a08c74"))
+	bt_sacchetto.pressed.connect(func():
+		if _versione == "carte":
+			mazzo_box.visible = true
+		else:
+			sacchetto_box.visible = true)
 	rs.add_child(bt_sacchetto)
 	dx.add_child(rs)
 	_crea_sacchetto()
+	_crea_mazzo()
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 16)
 	dx.add_child(hb)
@@ -707,6 +718,9 @@ func _crea_sala() -> void:
 	sala_bot = bottone("+ giocatore finto", 26, Color("#7a6a5a"))
 	sala_bot.pressed.connect(func(): comando.emit("bot", null))
 	hb.add_child(sala_bot)
+	sala_togli = bottone("Togli i finti", 26, Color("#7a6a5a"))
+	sala_togli.pressed.connect(func(): comando.emit("togli_bot", null))
+	hb.add_child(sala_togli)
 
 func _opzione(dove: Control, chiave: String, titolo: String, valori: Array, iniziale) -> void:
 	var r := HBoxContainer.new()
@@ -799,7 +813,90 @@ func aggiorna_sacchetto(m: Motore) -> void:
 		var q := m.quanti_token(tipo)
 		tot += q
 		(sacchetto_righe[tipo] as Label).text = str(q)
-	bt_sacchetto.text = "%d token: cambia" % tot
+	_sacchetto_testo = "Modifica sacchetto (%d token)" % tot
+	mostra_opzioni_versione(_versione)
+
+## Con le carte non servono le opzioni dei token (sacchetto, token sulla pista)
+func mostra_opzioni_versione(v: String) -> void:
+	_versione = v
+	var ls: Label = bt_sacchetto.get_parent().get_child(0)
+	ls.text = "Carte" if v == "carte" else "Sacchetto"
+	bt_sacchetto.text = _mazzo_testo if v == "carte" else _sacchetto_testo
+
+## Finestra per scegliere quali delle 32 carte ci sono nel mazzo
+func _crea_mazzo() -> void:
+	mazzo_box = ColorRect.new()
+	(mazzo_box as ColorRect).color = Color(0, 0, 0, 0.5)
+	mazzo_box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	mazzo_box.visible = false
+	sala.add_child(mazzo_box)
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", stile(CREMA, ROSSO, 26, 7))
+	p.anchor_left = 0.5
+	p.anchor_right = 0.5
+	p.anchor_top = 0.5
+	p.anchor_bottom = 0.5
+	p.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	p.grow_vertical = Control.GROW_DIRECTION_BOTH
+	mazzo_box.add_child(p)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	p.add_child(v)
+	var t := etichetta("LE CARTE NEL MAZZO (tocca per togliere o rimettere)", f_titolo, 38, ROSSO)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	var g := GridContainer.new()
+	g.columns = 11
+	g.add_theme_constant_override("h_separation", 6)
+	g.add_theme_constant_override("v_separation", 6)
+	v.add_child(g)
+	for k in Dati.CARTE.size():
+		var b := TextureButton.new()
+		b.texture_normal = load("res://assets/carte/c%02d.webp" % (k + 1))
+		b.ignore_texture_size = true
+		b.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+		b.custom_minimum_size = Vector2(108, 166)
+		b.pressed.connect(func(): comando.emit("carta", k))
+		g.add_child(b)
+		mazzo_bottoni.append(b)
+	var hb := HBoxContainer.new()
+	hb.alignment = BoxContainer.ALIGNMENT_CENTER
+	hb.add_theme_constant_override("separation", 24)
+	var tutte := bottone("Tutte le carte", 28, Color("#7a6a5a"))
+	tutte.pressed.connect(func(): comando.emit("carta", -1))
+	hb.add_child(tutte)
+	var ok := bottone("FATTO", 36, Color("#1d7a3a"))
+	ok.pressed.connect(func(): mazzo_box.visible = false)
+	hb.add_child(ok)
+	v.add_child(hb)
+
+func aggiorna_mazzo(m: Motore) -> void:
+	var escl: Array = m.cfg.get("carte_escluse", [])
+	for k in mazzo_bottoni.size():
+		mazzo_bottoni[k].modulate = Color(1, 1, 1, 0.25) if escl.has(k) else Color.WHITE
+	_mazzo_testo = "Modifica carte (%d nel mazzo)" % (Dati.CARTE.size() - escl.size())
+	mostra_opzioni_versione(_versione)
+
+## La carta pescata (o quella che si attiva da sotto la pista) compare grande sullo schermo
+func mostra_carta(k: int, sotto: bool) -> void:
+	var t := TextureRect.new()
+	t.texture = load("res://assets/carte/%s%02d.webp" % ["s" if sotto else "c", k + 1])
+	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	var vp := get_viewport_rect().size
+	var sz := Vector2(560, 268) if sotto else Vector2(340, 524)
+	t.size = sz
+	t.pivot_offset = sz / 2.0
+	t.position = Vector2(vp.x / 2.0 - sz.x / 2.0 - 120, vp.y / 2.0 - sz.y / 2.0)
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	t.scale = Vector2(0.1, 0.1)
+	add_child(t)
+	var tw := create_tween()
+	tw.tween_property(t, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(2.2 / velocita)
+	tw.tween_property(t, "scale", Vector2(0.05, 0.05), 0.25)
+	tw.tween_callback(t.queue_free)
+	await get_tree().create_timer(0.8 / velocita).timeout
 
 func imposta_opzione(chiave: String, valore) -> void:
 	for b in sala_opzioni.get(chiave, []):

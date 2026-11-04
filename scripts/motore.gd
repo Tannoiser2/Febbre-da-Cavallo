@@ -17,10 +17,11 @@ var io = null
 var cfg := {
 	"rettilinei": 4,        # 2 = corta, 4 = media, 6 = lunga
 	"posta": 15.0,          # euro a testa per corsa
-	"token_sempre": false,  # true: i token sulla pista scattano anche senza pallino verde
+	"token_sempre": false,  # (non più nel menu) true: i token sulla pista scattano anche senza pallino verde
 	"corsa_dado": true,     # a volte più dadi e corsa a prenderli
 	"cattiva": false,       # effetto multiplo: se un token porta il cavallo su un altro token, scatta anche quello
 	"sacchetto": {},        # quanti token di ogni tipo (vuoto = quelli del gioco)
+	"versione": "token",    # "token" oppure "carte" (versione con il mazzo di carte)
 }
 
 # stato
@@ -46,6 +47,8 @@ var domanda := {}           # domanda in corso (per i telefoni)
 var risultati := []         # alla fine: {uid, nome, quote, premio, talloncini}
 var _pid := 0
 var registro := []          # ultime cose successe (per i test)
+var mazzo := []             # versione carte: indici di Dati.CARTE ancora da pescare
+var extra_montepremi := 0.0 # quote pagate in più con "paga un'altra quota"
 var in_mano := 0            # token pescato non ancora rimesso a posto (per i controlli dei test)
 
 func _init() -> void:
@@ -108,14 +111,21 @@ func togli_giocatore(uid: String) -> void:
 			return
 
 # ------------------------------------------------------------------ preparazione
+func nuova_pista() -> Pista:
+	# con le carte i rettilinei sono i pezzi da 3 file (8 pezzi nella scatola), con i token da 4
+	return Pista.new(int(cfg["rettilinei"]) + (2 if carte() else 0), 3 if carte() else 4)
+
 func prepara_corsa() -> void:
-	pista = Pista.new(cfg["rettilinei"])
+	pista = nuova_pista()
 	cavalli = []
 	for i in 8:
 		cavalli.append({"id": i, "cella": Pista.PARTENZA, "attivo": true, "zoppo": false, "cella_zoppo": -1})
 	token = {}
 	sacchetto = sacchetto_iniziale()
 	sacchetto.shuffle()
+	mazzo = range(Dati.CARTE.size()).filter(func(x): return not cfg.get("carte_escluse", []).has(x))
+	mazzo.shuffle()
+	extra_montepremi = 0.0
 	vincitore = -1
 	n_turno = 0
 	salta_prossimo = false
@@ -137,7 +147,7 @@ func prepara_corsa() -> void:
 func distribuisci_talloncini(n: int) -> Array:
 	var tal := []
 	for c in 8:
-		for q in Dati.VALORI_TALLONCINI:
+		for q in valori_talloncini():
 			tal.append({"c": c, "q": q})
 	tal.shuffle()
 	tal.sort_custom(func(a, b): return a["q"] > b["q"])
@@ -180,6 +190,8 @@ func gioca_corsa() -> void:
 	n_corsa += 1
 	prepara_corsa()
 	fase = "pile"
+	if carte():
+		_log("versione carte")
 	cambiato.emit()
 	await v.aggiorna()
 	await v.dici(Dati.frase("pile"), "busta")
@@ -513,6 +525,9 @@ func token_nella_colonna(cella: int, ignora := -99) -> int:
 ## ci capita sopra, e quelli dietro l'ultimo cavallo con la Spazzata.
 ## "visti": i token già scattati in questa catena (opzione cattiva), così ognuno vale una volta sola.
 func risolvi_casella(uid: String, cid: int, verde: bool, origine: int, prof: int, visti := {}) -> void:
+	if carte():
+		await risolvi_carta(uid, cid, verde, origine, prof, visti)
+		return
 	var cella: int = cavalli[cid]["cella"]
 	if cella < 0 or prof > 12 or cavalli[cid]["zoppo"]:
 		return
@@ -552,8 +567,50 @@ func risolvi_casella(uid: String, cid: int, verde: bool, origine: int, prof: int
 	await v.aggiorna()
 
 ## Opzione cattiva: dopo uno spostamento dovuto a un token, se il cavallo è finito su un altro token scatta anche quello
+## Versione carte. Col pallino verde, fuori dalle curve e se nella colonna non c'è già una carta, se ne pesca una:
+## si esegue l'effetto di sopra e la carta va sotto la pista. Se il cavallo finisce in una colonna con una carta
+## si esegue l'effetto di sotto (e la carta torna nel mazzo se c'è scritto "scarta dopo l'uso").
+func risolvi_carta(uid: String, cid: int, verde: bool, origine: int, prof: int, visti := {}) -> void:
+	var cella: int = cavalli[cid]["cella"]
+	if cella < 0 or prof > 12 or cavalli[cid]["zoppo"]:
+		return
+	var tc := token_nella_colonna(cella)
+	if tc >= 0:
+		if visti.has(tc):
+			return
+		visti[tc] = true
+		var k: int = int(token[tc])
+		var cd: Dictionary = Dati.CARTE[k]
+		_log("carta %d sotto su %d" % [k, tc])
+		await v.carta_mostra(k, true)
+		await v.dici(cd["titolo"] + "! " + Dati.EFFETTI[cd["giu"]], "busta")
+		if cd["scarta"]:
+			token.erase(tc)
+			mazzo.append(k)
+			mazzo.shuffle()
+			await v.token_via([tc])
+		cambiato.emit()
+		await applica(uid, cid, cd["giu"], origine, prof, tc, visti)
+		cambiato.emit()
+		await v.aggiorna()
+		return
+	if not verde or prof > 0 or pista.celle[cella]["tipo"] == "c" or mazzo.is_empty():
+		return
+	var k2: int = mazzo.pop_back()
+	var cd2: Dictionary = Dati.CARTE[k2]
+	visti[cella] = true
+	_log("carta %d pescata su %d" % [k2, cella])
+	await v.carta_mostra(k2, false)
+	await v.dici(cd2["titolo"] + "! " + Dati.EFFETTI[cd2["su"]], "busta")
+	token[cella] = k2
+	cambiato.emit()
+	await v.aggiorna()
+	await applica(uid, cid, cd2["su"], origine, prof, cella, visti)
+	cambiato.emit()
+	await v.aggiorna()
+
 func _catena(uid: String, cid: int, origine: int, prof: int, visti: Dictionary) -> void:
-	if not cfg["cattiva"] or vincitore >= 0:
+	if (not cfg["cattiva"] and not carte()) or vincitore >= 0:
 		return
 	var c: Dictionary = cavalli[cid]
 	if c["zoppo"] or c["cella"] < 0:
@@ -561,13 +618,77 @@ func _catena(uid: String, cid: int, origine: int, prof: int, visti: Dictionary) 
 	var tc := token_nella_colonna(c["cella"])
 	if tc < 0 or visti.has(tc):
 		return
-	await v.dici("Effetto multiplo! Un altro token...", "sorpreso")
+	if not carte():
+		await v.dici("Effetto multiplo! Un altro token...", "sorpreso")
 	await risolvi_casella(uid, cid, false, origine, prof + 1, visti)
 
 func applica(uid: String, cid: int, tipo: String, origine: int, prof: int, cella_token: int, visti := {}) -> void:
 	var c: Dictionary = cavalli[cid]
 	match tipo:
-		"piu1", "piu2", "piu3":
+		"meno2":
+			var d := pista.destinazioni(c["cella"], 2, false, occupate(cid))
+			if d["celle"].is_empty():
+				await v.dici("Non c'è posto dietro: " + Dati.nome(cid) + " resta fermo.", "pensa")
+				return
+			var da: int = c["cella"]
+			var dest := await chiedi_destinazione(uid, cid, d, "Dove arretra " + Dati.nome(cid) + "?")
+			await muovi(cid, da, dest, d, false)
+		"ultimo2", "ultimo3":
+			var n := int(tipo.substr(6))
+			var minp := 1.0e9
+			for x in cavalli:
+				if not x["zoppo"]:
+					minp = minf(minp, pista.progresso(x["cella"]))
+			var ultimi := []
+			for x in cavalli:
+				if not x["zoppo"] and pista.progresso(x["cella"]) == minp:
+					var d := pista.destinazioni(x["cella"], n, true, occupate(x["id"]))
+					if d["celle"].size() or d["traguardo"]:
+						ultimi.append(x["id"])
+			if ultimi.is_empty():
+				await v.dici("L'ultimo cavallo non ha spazio per avanzare.", "pensa")
+				return
+			var k: int = ultimi[0]
+			if ultimi.size() > 1:
+				k = await chiedi_cavallo(uid, "Quale degli ultimi avanza di %d?" % n, ultimi, "ultimo")
+			var d2 := pista.destinazioni(cavalli[k]["cella"], n, true, occupate(k))
+			var da2: int = cavalli[k]["cella"]
+			var dest2 := await chiedi_destinazione(uid, k, d2, "Dove si ferma " + Dati.nome(k) + "?")
+			await v.dici("L'ultimo, " + Dati.nome(k) + ", recupera terreno!", "sorpreso")
+			await muovi(k, da2, dest2, d2, true)
+			await _catena(uid, k, da2, prof, visti)
+		"primo_dis":
+			var p := _primo()
+			if p >= 0:
+				cavalli[p]["attivo"] = false
+				await v.aggiorna()
+				await v.dici(Dati.nome(p) + ", il primo, viene disattivato!", "ride")
+		"riattivato":
+			c["attivo"] = true
+			await v.aggiorna()
+			await v.dici(Dati.nome(cid) + " resta attivo!", "festeggia")
+		"rimescola":
+			var via := token.keys()
+			for t in via:
+				mazzo.append(int(token[t]))
+				token.erase(t)
+			mazzo.shuffle()
+			await v.token_via(via)
+			await v.dici("Rimescola! Tutte le carte sulla pista tornano nel mazzo.", "disperato")
+		"paga":
+			var g := trova(uid)
+			if not g.is_empty() and cfg["posta"] > 0:
+				g["saldo"] -= cfg["posta"]
+				extra_montepremi += cfg["posta"]
+				await v.dici("%s paga un'altra quota: %s in più nel montepremi!" % [nome_g(uid), euro(cfg["posta"])], "soldi")
+			else:
+				await v.dici("%s dovrebbe pagare un'altra quota... ma si gioca per la gloria!" % nome_g(uid), "ride")
+		"supera2":
+			var da3: int = c["cella"]
+			await _supera(uid, cid, 2)
+			if c["cella"] != da3:
+				await _catena(uid, cid, da3, prof, visti)
+		"piu1", "piu2", "piu3", "piu4":
 			var n := int(tipo.substr(3))
 			var d := pista.destinazioni(c["cella"], n, true, occupate(cid))
 			if d["celle"].is_empty() and not d["traguardo"]:
@@ -684,18 +805,23 @@ func applica(uid: String, cid: int, tipo: String, origine: int, prof: int, cella
 			await v.token_via(via)
 			await v.dici("Spazzata! %d token tornano nel sacchetto." % (via.size() + 1), "ride")
 
-func _supera(uid: String, cid: int) -> void:
+func _supera(uid: String, cid: int, quanti := 1) -> void:
 	var c: Dictionary = cavalli[cid]
 	var mio := pista.progresso(c["cella"])
-	var davanti := -1
-	var pd := 99999.0
+	var davanti_l := []
 	for x in cavalli:
 		if x["zoppo"] or x["id"] == cid:
 			continue
 		var p := pista.progresso(x["cella"])
-		if p > mio and p < pd:
-			pd = p
-			davanti = x["id"]
+		if p > mio:
+			davanti_l.append([p, x["id"]])
+	davanti_l.sort_custom(func(a, b): return a[0] < b[0])
+	var davanti := -1
+	var pd := 99999.0
+	if davanti_l.size():
+		var i := mini(quanti, davanti_l.size()) - 1
+		pd = davanti_l[i][0]
+		davanti = davanti_l[i][1]
 	if davanti < 0:
 		await v.dici(Dati.nome(cid) + " è già in testa: niente sorpasso.", "occhiolino")
 		return
@@ -739,8 +865,24 @@ func _rientro_zoppi() -> void:
 	cambiato.emit()
 
 # ------------------------------------------------------------------ fine
+func carte() -> bool:
+	return cfg.get("versione", "token") == "carte"
+
+func valori_talloncini() -> Array:
+	return Dati.VALORI_TALLONCINI_CARTE if carte() else Dati.VALORI_TALLONCINI
+
+## quote per cavallo: 15 con i token (1-5), 10 con le carte (1-4)
+func quote_totali() -> int:
+	var t := 0
+	for q in valori_talloncini():
+		t += q
+	return t
+
+func montepremi() -> float:
+	return cfg["posta"] * giocatori.size() + extra_montepremi
+
 func quota_euro() -> float:
-	return cfg["posta"] * giocatori.size() / 15.0
+	return montepremi() / float(quote_totali())
 
 func euro(x: float) -> String:
 	if x <= 0.0:
@@ -861,11 +1003,12 @@ func segreto(uid: String) -> Dictionary:
 # ------------------------------------------------------------------ salvataggio (per riprendere)
 func salva() -> Dictionary:
 	return {"cfg": cfg, "fase": fase, "giocatori": giocatori, "cavalli": cavalli, "token": token, "sacchetto": sacchetto,
-		"pile": pile, "n_corsa": n_corsa, "n_turno": n_turno, "salta": salta_prossimo, "ultimo": ultimo_uid, "giro": giro}
+		"pile": pile, "n_corsa": n_corsa, "n_turno": n_turno, "salta": salta_prossimo, "ultimo": ultimo_uid, "giro": giro,
+		"mazzo": mazzo, "extra": extra_montepremi}
 
 func carica(s: Dictionary) -> void:
 	cfg.merge(s["cfg"], true)
-	pista = Pista.new(int(cfg["rettilinei"]))
+	pista = nuova_pista()
 	fase = s["fase"]
 	giocatori = s["giocatori"]
 	cavalli = []
@@ -873,7 +1016,12 @@ func carica(s: Dictionary) -> void:
 		cavalli.append({"id": int(c["id"]), "cella": int(c["cella"]), "attivo": c["attivo"], "zoppo": c["zoppo"], "cella_zoppo": int(c["cella_zoppo"])})
 	token = {}
 	for k in s["token"]:
-		token[int(k)] = s["token"][k]
+		var t = s["token"][k]
+		token[int(k)] = int(t) if (t is float or t is int) else t
+	mazzo = []
+	for x in s.get("mazzo", []):
+		mazzo.append(int(x))
+	extra_montepremi = float(s.get("extra", 0.0))
 	sacchetto = s["sacchetto"]
 	pile = []
 	for p in s["pile"]:

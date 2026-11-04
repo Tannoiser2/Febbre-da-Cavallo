@@ -13,7 +13,7 @@ const LARG_CORSIA := 2.33
 const R0 := 3.75            # raggio del bordo interno della prima corsia
 const BORDO := 0.4
 const LUNG_FILA := 5.8      # lunghezza di una fila nel rettilineo
-const FILE_PER_TRATTO := 4
+var file_per_tratto := 4
 const CELLE_CURVA := [1, 2, 3]   # caselle per corsia in ogni curva da 90 gradi
 const R_MEDIO := R0 + LARG_CORSIA * 1.5
 
@@ -29,14 +29,15 @@ var prec := {}
 var adiacenti := {}
 var colonna := {}          # caselle affiancate da un bordo all'altro (sovrapposte lungo la pista)
 
-func _init(rettilinei: int = 4) -> void:
+func _init(rettilinei: int = 4, file_tratto := 4) -> void:
 	n_rettilinei = max(2, rettilinei - rettilinei % 2)
+	file_per_tratto = file_tratto
 	_costruisci()
 
 # ------------------------------------------------------------------ costruzione
 func _costruisci() -> void:
 	var k := n_rettilinei / 2
-	lato = k * FILE_PER_TRATTO * LUNG_FILA
+	lato = k * file_per_tratto * LUNG_FILA
 	var quarto := PI / 2.0 * R_MEDIO
 	var s := 0.0
 	# rettilineo in basso, curva destra (2 pezzi), rettilineo in alto, curva sinistra (2 pezzi)

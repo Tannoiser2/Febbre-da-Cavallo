@@ -39,6 +39,8 @@ func _init() -> void:
 		m.cfg["rettilinei"] = [2, 4, 6][i % 3]
 		m.cfg["token_sempre"] = i % 2 == 0
 		m.cfg["cattiva"] = i % 4 < 2
+		if i % 3 == 1:
+			m.cfg["versione"] = "carte"
 		if i % 5 == 0:
 			m.cfg["sacchetto"] = {"piu3": 4, "indietro": 4, "tre": 3, "azzoppato": 3, "allarme": 0}
 		m.v = VistaVuota.new()
@@ -58,9 +60,9 @@ func _init() -> void:
 		var tot_q := 0
 		for r in m.risultati:
 			tot_q += r["quote"]
-		if tot_q != 15:
+		if tot_q != m.quote_totali():
 			_err += 1
-			print("quote vincenti %d invece di 15" % tot_q)
+			print("quote vincenti %d invece di %d" % [tot_q, m.quote_totali()])
 		var somme := []
 		for pl in m.pile:
 			var t := 0
@@ -78,13 +80,22 @@ func _init() -> void:
 				s += x
 			print("rettilinei %d: turni medi %.1f (min %d, max %d)" % [r, float(s) / l.size(), l.min(), l.max()])
 	print("vittorie per cavallo: ", vinc)
+	print("carte giocate: ", _carte)
 	print("ERRORI: %d" % (errori + _err))
 	quit(1 if errori + _err else 0)
 
 var _err := 0
+var _carte := 0
 func _controlla(m: Motore) -> void:
 	if m.fase != "corsa":
 		return
+	if m.carte():
+		var tot: int = m.mazzo.size() + m.token.size()
+		_carte = max(_carte, 32 - m.mazzo.size())
+		if tot != 32:
+			_err += 1
+			print("carte: %d invece di 32 " % tot, m.registro.slice(-4))
+			m.mazzo = range(32).filter(func(x): return not m.token.values().has(x))
 	var occ := {}
 	for c in m.cavalli:
 		if c["cella"] >= 0 and not c["zoppo"]:
@@ -93,6 +104,6 @@ func _controlla(m: Motore) -> void:
 				print("due cavalli sulla casella ", c["cella"], " ", m.registro.slice(-6))
 			occ[c["cella"]] = true
 	var n: int = m.sacchetto.size() + m.token.size() + m.in_mano
-	if n != m.sacchetto_iniziale().size():
+	if not m.carte() and n != m.sacchetto_iniziale().size():
 		_err += 1
 		print("token: %d invece di %d " % [n, m.sacchetto_iniziale().size()], m.registro.slice(-4))
