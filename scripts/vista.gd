@@ -31,7 +31,7 @@ func commenta(t: String, posa := "parla") -> void:
 	dici(t, posa)
 
 func dici(t: String, posa := "parla") -> void:
-	var varianti: Array = Dati.VARIANTI_POSA.get(posa, [posa]).filter(func(x): return ui.pose.has(x))
+	var varianti: Array = Dati.VARIANTI_POSA.get(posa, [posa]).filter(func(x): return Dati.TUTTE_POSE.has(x))
 	if varianti.size():
 		posa = varianti[randi() % varianti.size()]
 	ultima_frase = t

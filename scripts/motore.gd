@@ -301,7 +301,7 @@ func corsa_al_dado(tutti := false) -> void:
 	dado_attuale = facce
 	in_corsa_dado = true
 	cambiato.emit()
-	await v.dici("Corsa al dado per tutti! Veloci col dito!" if tutti else Dati.frase("corsa_dado"), "sorpreso")
+	await v.dici("Corsa al dado per tutti! Veloci col dito!" if tutti else Dati.frase("corsa_dado"), "suspense")
 	await v.dado(facce)
 	await v.estrazione_multipla(scelti)
 	var liberi := scelti.duplicate()

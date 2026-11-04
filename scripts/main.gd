@@ -260,7 +260,7 @@ func chiedi(d: Dictionary) -> Dictionary:
 		var passato := (Time.get_ticks_msec() - t0) / 1000.0
 		if not sollecito and passato > limite * 0.5 and d["tipo"] != "pila":
 			sollecito = true
-			vista.dici(Dati.frase("aspetta", {"g": m.nome_g(d["per"][0])}), "pensa")
+			vista.dici(Dati.frase("aspetta", {"g": m.nome_g(d["per"][0])}), "aspetta")
 		if _forza or passato > limite or (auto and passato > 8.0):
 			var uid: String = d["per"][randi() % d["per"].size()]
 			_risposta = {"uid": uid, "k": m.scelta_automatica(d, uid)}

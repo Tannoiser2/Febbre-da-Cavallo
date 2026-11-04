@@ -72,13 +72,8 @@ func _ready() -> void:
 	th.default_font = f_testo
 	th.default_font_size = 30
 	theme = th
-	for p in ["base", "busta", "conta1", "conta2", "conta3", "festeggia", "indica", "martello", "occhiolino", "parla", "pensa", "ride", "saluta", "soldi", "sorpreso", "sussurra", "triste"]:
-		pose[p] = load("res://assets/avatar/%s.webp" % p)
-	# pose da ippodromo: si usano solo se ci sono i file (vedi AVATAR_POSE.md)
-	for p in Dati.POSE_IPPODROMO:
-		var f := "res://assets/avatar/%s.webp" % p
-		if ResourceLoader.exists(f):
-			pose[p] = load(f)
+	for p in ["saluta", "parla", "indica"]:
+		posa_tex(p)
 	_crea_titolo()
 	_crea_destra()
 	_crea_banner()
@@ -587,11 +582,17 @@ func _crea_avatar() -> void:
 	testo_fumetto.custom_minimum_size = Vector2(200, 0)
 	fumetto.add_child(testo_fumetto)
 
+## Le pose si caricano la prima volta che servono (sono tante)
+func posa_tex(p: String) -> Texture2D:
+	if not pose.has(p):
+		if not Dati.TUTTE_POSE.has(p):
+			return null
+		pose[p] = load("res://assets/avatar/%s.webp" % p)
+	return pose[p]
+
 func parla(testo: String, posa: String) -> void:
-	if pose.has(posa):
-		avatar.texture = pose[posa]
-	elif posa.begins_with("conta"):
-		avatar.texture = pose["parla"]
+	var tx := posa_tex(posa)
+	avatar.texture = tx if tx else posa_tex("parla")
 	fumetto.visible = testo != "" and not sala.visible
 	testo_fumetto.text = testo
 	var larg := clampf(testo.length() * 18.0, 260.0, maxf(300.0, minf(900.0, get_viewport_rect().size.x - 760.0)))

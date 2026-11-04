@@ -282,24 +282,25 @@ const FRASI_TOKEN := {
 	"sorpresa": ["Punto interrogativo! Nuovo giro!", "Il mistero del punto interrogativo!", "Sorpresa generale!"],
 }
 
-## Pose nuove da ippodromo (file assets/avatar/<nome>.webp, da far disegnare: vedi AVATAR_POSE.md).
-## Finché un file manca, quella posa semplicemente non viene usata.
-const POSE_IPPODROMO := ["binocolo", "tifa", "schedina", "disperato", "microfono", "cappello", "galoppo", "orologio", "dado", "applaude"]
+## Tutte le pose del cronista (assets/avatar/<nome>.webp, le stesse di Mercante in fiera)
+const TUTTE_POSE := ["abbraccio", "affare", "applaude", "attesa", "attesa_b", "attesa_occhi", "base", "brindisi", "busta", "busta_premio", "campanella", "carretto", "carta", "carta_b", "conta1", "conta2", "conta3", "disperato", "doppietta", "duello", "festeggia", "inchino", "indica", "indica_b", "lacrima", "lente", "martello", "megafono", "mercato", "occhiolino", "occhiolino_b", "orecchio", "orologio", "parla", "parla_b", "parla_c", "pausa", "pensa", "pensieroso", "pergamena", "regalo", "ride", "rullo", "sacco_aperto", "saluta", "sbadiglio", "soldi", "soldi_pioggia", "sorpreso", "stretta", "sussurra", "tensione", "tripletta", "triste", "triste_b", "trofeo", "wow"]
 
-## Pose dell'avatar: per ogni posa chiesta se ne sceglie una simile, così cambia spesso
+## Per ogni posa chiesta se ne sceglie una simile, così il cronista cambia spesso espressione
 const VARIANTI_POSA := {
-	"parla": ["parla", "indica", "occhiolino", "base", "microfono", "binocolo"],
-	"indica": ["indica", "indica", "parla", "occhiolino", "microfono", "dado"],
-	"saluta": ["saluta", "saluta", "ride", "occhiolino", "cappello"],
-	"sorpreso": ["sorpreso", "sorpreso", "pensa", "binocolo", "disperato"],
-	"ride": ["ride", "ride", "occhiolino", "festeggia", "applaude"],
-	"festeggia": ["festeggia", "festeggia", "ride", "soldi", "tifa", "applaude"],
-	"triste": ["triste", "triste", "pensa", "disperato"],
-	"pensa": ["pensa", "pensa", "sussurra", "orologio", "schedina"],
-	"occhiolino": ["occhiolino", "occhiolino", "ride", "indica", "cappello"],
-	"sussurra": ["sussurra", "sussurra", "pensa", "occhiolino", "schedina"],
-	"soldi": ["soldi", "soldi", "festeggia", "schedina"],
-	"busta": ["busta", "busta", "sussurra", "schedina"],
+	"parla": ["parla", "parla_b", "parla_c", "mercato", "abbraccio", "megafono", "occhiolino_b"],
+	"indica": ["indica", "indica_b", "duello", "occhiolino_b", "megafono"],
+	"saluta": ["saluta", "inchino", "abbraccio", "wow", "stretta"],
+	"sorpreso": ["sorpreso", "wow", "disperato", "tensione", "lente"],
+	"ride": ["ride", "applaude", "occhiolino", "festeggia"],
+	"festeggia": ["festeggia", "applaude", "trofeo", "brindisi", "soldi_pioggia", "campanella"],
+	"triste": ["triste", "triste_b", "lacrima", "disperato"],
+	"pensa": ["pensa", "pensieroso", "lente", "orecchio"],
+	"occhiolino": ["occhiolino", "occhiolino_b", "affare", "base"],
+	"sussurra": ["sussurra", "orecchio", "affare"],
+	"soldi": ["soldi", "soldi_pioggia", "busta_premio", "trofeo"],
+	"busta": ["busta", "carta", "carta_b", "pergamena", "sacco_aperto"],
+	"aspetta": ["orologio", "sbadiglio", "attesa", "attesa_b", "attesa_occhi", "pausa"],
+	"suspense": ["rullo", "tensione", "campanella", "megafono"],
 }
 
 static func frase_token(t: String) -> String:
