@@ -396,7 +396,17 @@ func esegui_mossa(uid: String, faccia: Dictionary) -> void:
 		await _controlla_ripristino()
 		return
 	var tit := ("Quale cavallo muovi di %d (avanti o indietro)?" % n) if e else ("Quale cavallo fai avanzare di %d?" % n)
-	var cid: int = await chiedi_cavallo(uid, tit, validi, "muovi")
+	# anteprima per il telefono: per ogni cavallo il pezzo di pista dove può andare, con token e carte
+	var ant := {}
+	for k in validi:
+		var mm := mosse(k, n, e)
+		var dest := []
+		for vv in mm.values():
+			for x in vv["celle"]:
+				if not dest.has(x):
+					dest.append(x)
+		ant[str(k)] = mappa_caselle(dest, cavalli[k]["cella"], k, mm.has("avanti") and mm["avanti"]["traguardo"])
+	var cid: int = await chiedi_cavallo(uid, tit, validi, "muovi", {"anteprime": ant})
 	var m := mosse(cid, n, e)
 	var verso := "avanti"
 	if m.size() > 1:
@@ -531,7 +541,7 @@ func chiedi_casella(uid: String, titolo: String, scelte: Array, rispetto: int, e
 
 ## Pezzo di pista "srotolato" attorno alle caselle da scegliere, per disegnarlo sul telefono:
 ## x lungo la pista (0 = casella di partenza del cavallo), l = corsia (0 interna), n = numero della scelta
-func mappa_caselle(scelte: Array, rispetto: int, cid: int) -> Dictionary:
+func mappa_caselle(scelte: Array, rispetto: int, cid: int, traguardo := false) -> Dictionary:
 	var ref := pista.progresso(rispetto) if rispetto >= 0 else 0.0
 	var rel := func(s: float) -> float:
 		var d := s - ref
@@ -540,8 +550,8 @@ func mappa_caselle(scelte: Array, rispetto: int, cid: int) -> Dictionary:
 		elif d < -pista.lunghezza / 2.0:
 			d += pista.lunghezza
 		return d
-	var lo := 0.0 if rispetto >= 0 else -2.0
-	var hi := 0.0
+	var lo := -Pista.LUNG_FILA * 0.5 if rispetto >= 0 else -2.0
+	var hi := Pista.LUNG_FILA * 0.5
 	for c in scelte:
 		lo = minf(lo, rel.call(pista.celle[c]["s0"]))
 		hi = maxf(hi, rel.call(pista.celle[c]["s1"]))
@@ -566,9 +576,9 @@ func mappa_caselle(scelte: Array, rispetto: int, cid: int) -> Dictionary:
 			e["n"] = i + 1
 			e["k"] = cc["id"]
 		if token.has(cc["id"]):
-			e["tok"] = true
+			e["tok"] = token[cc["id"]]
 		celle_m.append(e)
-	return {"lo": snappedf(lo, 0.01), "hi": snappedf(hi, 0.01), "celle": celle_m,
+	return {"lo": snappedf(lo, 0.01), "hi": snappedf(hi, 0.01), "celle": celle_m, "arrivo": traguardo,
 		"col": Dati.CAVALLI[cid]["colore"] if cid >= 0 else ""}
 
 # ------------------------------------------------------------------ token

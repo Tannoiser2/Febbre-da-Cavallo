@@ -134,3 +134,10 @@ body.lampo::after { content: ''; position: fixed; inset: 0; background: #fff; po
 .cavalli.fissi .cavallo.riposa:disabled { background: #e8e2d8 !important; }
 .cavallo .quote { top: auto; bottom: 4px; }
 .corsadado .piccolo { color: #fff8d0; }
+
+.cavallo.scelto { box-shadow: 0 0 0 5px #ff2d55, 0 4px 0 #333 !important; animation: none; }
+.anteprima { text-align: center; }
+.anteprima .mappa { margin: 8px auto 0; }
+.mappa { max-width: 100%; }
+.centro { text-align: center; }
+.muovi { font-size: 34px; padding: 14px 8px; white-space: nowrap; }

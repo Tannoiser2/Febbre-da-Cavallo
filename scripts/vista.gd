@@ -75,6 +75,7 @@ func pila_scelta(uid: String, p: int) -> void:
 	await _attendi(0.3)
 
 func estrazione(uid: String) -> void:
+	ip.vista_generale()
 	ui.togli_dadi()
 	ui.mostra_banner("")
 	await ui.roulette_ritratti(m, uid, func(): rete.suono("tick"))
@@ -101,6 +102,7 @@ func dado(facce: Array) -> void:
 	await _attendi(0.4)
 
 func dado_corsa_turno(uid: String) -> void:
+	ip.vista_generale()
 	ui.evidenzia_preso(m.nome_g(uid))
 	await _attendi(0.3)
 
@@ -182,6 +184,21 @@ func mostra_domanda(d: Dictionary) -> void:
 			if o["ok"]:
 				ok.append(int(o["k"]))
 		ip.evidenzia_cavalli(ok)
+
+func guarda(cid: int, d: Dictionary) -> void:
+	if cid < 0 or cid > 7:
+		return
+	ip.zoom_segui = 0.55
+	ip._segui = ip.cavalli[cid]
+	ip.evidenzia_cavalli([cid])
+	var mp: Dictionary = d.get("anteprime", {}).get(str(cid), {})
+	var celle := []
+	var n := 1
+	for c in mp.get("celle", []):
+		if c.has("n"):
+			celle.append({"t": str(n), "cella": int(c["k"])})
+			n += 1
+	ip.mostra_marcatori(celle)
 
 func togli_domanda() -> void:
 	ui.bt_decidi.visible = false

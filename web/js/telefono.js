@@ -134,41 +134,74 @@ function talloncini(vincitore = -1) {
     ${aperto ? `<div class="talloncini">${t}</div>` : '<p class="piccolo">Tocca per guardarli di nascosto.</p>'}</div>`;
 }
 
-// I cavalli sono sempre visibili: si possono toccare solo quando si deve scegliere un cavallo
+// I cavalli sono sempre visibili: si possono toccare solo quando si deve scegliere un cavallo.
+// Per muovere: il primo tocco mostra dove può andare (e la TV lo inquadra), poi si conferma con MUOVI
+let anteprima = -1;
+let anteprimaPer = -1;
 function cavalli(d) {
   if (!S?.cavalli) return '';
   const val = mieQuote();
-  const scelta = d && d.tipo === 'cavallo' && inviato !== d.id ? Object.fromEntries(d.opzioni.map((o) => [o.k, o.ok])) : null;
-  return `<div class="cavalli fissi">${S.cavalli.map((c) => {
+  const attiva = d && d.tipo === 'cavallo' && inviato !== d.id;
+  const scelta = attiva ? Object.fromEntries(d.opzioni.map((o) => [o.k, o.ok])) : null;
+  const conAnteprima = attiva && d.anteprime;
+  if (!attiva || anteprimaPer !== d.id) { anteprima = -1; anteprimaPer = attiva ? d.id : -1; }
+  let h = `<div class="cavalli fissi">${S.cavalli.map((c) => {
     const ok = scelta ? !!scelta[c.id] : false;
-    return `<button class="cavallo ${c.attivo ? '' : 'riposa'} ${scelta && ok ? 'valido' : ''}" ${ok ? `data-k="${c.id}"` : 'disabled'}
+    const k = conAnteprima ? `data-a="${c.id}"` : `data-k="${c.id}"`;
+    return `<button class="cavallo ${c.attivo ? '' : 'riposa'} ${scelta && ok ? 'valido' : ''} ${anteprima === c.id ? 'scelto' : ''}" ${ok ? k : 'disabled'}
       style="border-color:${esc(c.col)}"><span class="col" style="background:${esc(c.col)}"></span>
       <span>${esc(c.nome)}<small>${esc(c.stato)}</small></span>${val[c.id] ? `<span class="quote">${val[c.id]}</span>` : ''}</button>`;
   }).join('')}</div>`;
+  if (conAnteprima && anteprima >= 0) {
+    const cv = S.cavalli[anteprima];
+    h += `<div class="box anteprima"><button class="verde muovi" data-k="${anteprima}">MUOVI ${esc(cv.nome.toUpperCase())}</button>
+      ${mappa(d.anteprime[String(anteprima)], false)}</div>`;
+  } else if (conAnteprima) {
+    h += `<p class="piccolo centro">Tocca un cavallo illuminato per vedere dove può andare.</p>`;
+  }
+  return h;
 }
 
-// La scelta della casella si fa su un pezzo di pista disegnato come quello della TV
-function mappa(d) {
-  const m = d.mappa;
+// Pezzo di pista in verticale (si va verso l'alto, corsia interna a sinistra), con i cavalli,
+// le caselle dove si può arrivare (numerate) e accanto i token o le carte della colonna
+function mappa(m, tocca = true) {
   if (!m) return '';
-  const W = 340, LANE = 46, PAD = 10;
-  const sc = (W - 2 * PAD) / Math.max(1, m.hi - m.lo);
-  const H = LANE * 3 + 2 * PAD;
-  let svg = `<svg class="mappa" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-    <rect x="0" y="0" width="${W}" height="${H}" rx="12" fill="#2f8f3f"/>
-    <rect x="${PAD - 4}" y="${PAD - 4}" width="${W - 2 * PAD + 8}" height="${LANE * 3 + 8}" fill="#1d7a4a"/>`;
+  const LANE = 62, PAD = 10, SIDE = 112, W = PAD * 2 + LANE * 3 + SIDE;
+  const span = Math.max(1, m.hi - m.lo);
+  const sc = Math.min(30, Math.max(14, 560 / span));
+  const H = Math.round(span * sc + 2 * PAD);
+  const Y = (v) => PAD + (m.hi - v) * sc;
+  let svg = `<svg class="mappa" viewBox="0 0 ${W} ${H + (m.arrivo ? 40 : 0)}" xmlns="http://www.w3.org/2000/svg" style="max-height:62vh">
+    <rect x="0" y="0" width="${W}" height="${H + (m.arrivo ? 40 : 0)}" rx="12" fill="#2f8f3f"/>
+    <rect x="${PAD - 5}" y="0" width="${LANE * 3 + 10}" height="${H + (m.arrivo ? 40 : 0)}" fill="#1d7a4a"/>`;
+  if (m.arrivo) svg += `<rect x="${PAD}" y="4" width="${LANE * 3}" height="30" fill="#fff"/><text x="${PAD + LANE * 1.5}" y="28" text-anchor="middle" font-family="Bangers" font-size="26" fill="#b8202a">ARRIVO</text>`;
+  const off = m.arrivo ? 40 : 0;
+  const toks = {};
   for (const c of m.celle) {
-    const x = PAD + (c.a - m.lo) * sc, w = (c.b - c.a) * sc, y = PAD + c.l * LANE;
+    const x = PAD + c.l * LANE, y = Y(c.b) + off, h = (c.b - c.a) * sc;
     const scelta = c.n != null;
-    svg += `<rect x="${x + 1.5}" y="${y + 1.5}" width="${Math.max(2, w - 3)}" height="${LANE - 3}" rx="4"
-      fill="${scelta ? '#ffe36b' : (c.c ? '#f6d978' : '#ebc248')}" stroke="${scelta ? '#ff2d55' : '#1d7a4a'}" stroke-width="${scelta ? 4 : 1.5}"
-      ${scelta ? `data-k="${c.k}"` : ''}/>`;
-    if (c.tok) svg += `<rect x="${x + 3}" y="${y + 3}" width="${Math.max(2, w - 6)}" height="${LANE - 6}" rx="3" fill="#7fc8ff" opacity=".45" pointer-events="none"/>`;
-    if (c.cav) svg += `<circle cx="${x + w / 2}" cy="${y + LANE / 2}" r="13" fill="${c.cav}" stroke="${c.io ? '#fff' : '#000'}" stroke-width="${c.io ? 4 : 2}" pointer-events="none"/>`;
-    if (scelta) svg += `<text x="${x + w / 2}" y="${y + LANE / 2 + 10}" text-anchor="middle" font-family="Bangers" font-size="30" fill="#b0002a" pointer-events="none">${c.n}</text>`;
+    svg += `<rect x="${x + 2}" y="${y + 2}" width="${LANE - 4}" height="${Math.max(2, h - 4)}" rx="5"
+      fill="${scelta ? '#ffe36b' : (c.c ? '#f6d978' : '#ebc248')}" stroke="${scelta ? '#ff2d55' : '#1d7a4a'}" stroke-width="${scelta ? 5 : 1.5}"
+      ${scelta && tocca ? `data-k="${c.k}"` : ''}/>`;
+    if (c.tok != null && c.tok !== false) toks[Math.round((c.a + c.b) * 5)] = { tok: c.tok, y: y + h / 2 };
+    if (c.cav) svg += `<circle cx="${x + LANE / 2}" cy="${y + h / 2}" r="17" fill="${c.cav}" stroke="${c.io ? '#fff' : '#000'}" stroke-width="${c.io ? 5 : 2}" pointer-events="none"/>`;
+    if (scelta) svg += `<text x="${x + LANE / 2}" y="${y + h / 2 + 12}" text-anchor="middle" font-family="Bangers" font-size="34" fill="#b0002a" pointer-events="none">${c.n}</text>`;
+  }
+  // un token o una carta per colonna, sul prato a destra della pista
+  const visti = [];
+  for (const t of Object.values(toks)) {
+    if (visti.some((v) => Math.abs(v - t.y) < 52)) continue;
+    visti.push(t.y);
+    const xs = PAD * 2 + LANE * 3 + 4;
+    if (typeof t.tok === 'number') {
+      // della carta si vede la parte di sotto, come sulla pista
+      svg += `<image href="img/carte/s${String(t.tok + 1).padStart(2, '0')}.webp" x="${xs}" y="${t.y - 26}" width="${SIDE - 8}" height="${(SIDE - 8) * 0.48}" preserveAspectRatio="xMidYMid meet" pointer-events="none"/>`;
+    } else {
+      svg += `<image href="img/token/${esc(t.tok)}.webp" x="${xs + 12}" y="${t.y - 40}" width="80" height="80" pointer-events="none"/>`;
+    }
   }
   svg += `</svg>`;
-  return `<p class="piccolo">Il cavallo va da sinistra a destra; in alto la corsia interna. Tocca la casella.</p>${svg}`;
+  return svg;
 }
 
 // Corsa al dado: a tutto schermo, finché non sono stati presi tutti i dadi
@@ -197,7 +230,7 @@ function domanda() {
   } else if (d.tipo === 'cavallo') {
     corpo = `<p class="piccolo">Tocca uno dei cavalli illuminati qui sotto.</p>`;
   } else if (d.tipo === 'casella') {
-    corpo = d.mappa ? mappa(d) : `<div class="scelte">${op.map((o) => `<button class="casella" data-k="${esc(o.k)}">
+    corpo = d.mappa ? `<p class="piccolo">Si va verso l'alto; a sinistra la corsia interna. Tocca la casella.</p>${mappa(d.mappa)}` : `<div class="scelte">${op.map((o) => `<button class="casella" data-k="${esc(o.k)}">
       <span class="num">${esc(o.t)}</span><small>${esc(o.s || '')}</small></button>`).join('')}</div>`;
   } else if (d.tipo === 'prendi') {
     corpo = `<div class="dadi">${op.map((o) => `<button class="dado ${o.e ? 'doppio' : ''}" data-k="${esc(o.k)}" ${o.ok ? '' : 'disabled'}>${o.e ? `+${o.n}<br>-${o.n}` : '+' + esc(o.n)}${o.v ? '<span class="pv"></span>' : ''}</button>`).join('')}</div>
@@ -271,6 +304,16 @@ function disegna() {
   app.innerHTML = h;
   app.querySelectorAll('[data-k]').forEach((b) => {
     b.onclick = () => rispondi(b.getAttribute('data-k'));
+  });
+  app.querySelectorAll('[data-a]').forEach((b) => {
+    b.onclick = () => {
+      anteprima = Number(b.getAttribute('data-a'));
+      const d = S?.domanda;
+      if (d) rete.push(`${RADICE}/${codice}/azioni`, { da: uid, p: d.id, k: String(anteprima), g: 1, t: Date.now() }).catch(() => {});
+      suona('click');
+      disegna();
+      app.querySelector('.anteprima')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
   });
   // i titoli stanno su una riga: se non ci stanno si rimpiccioliscono
   app.querySelectorAll('.domanda h2, .tocca').forEach((el) => {

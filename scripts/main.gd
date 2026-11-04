@@ -115,6 +115,10 @@ func _evento(e: Dictionary) -> void:
 			ui.aggiorna_sala(m)
 		"azione":
 			_azione(e["uid"], e)
+		"guarda":
+			# il giocatore sta guardando un cavallo sul telefono: la TV lo inquadra da vicino
+			if not _domanda.is_empty() and _domanda["per"].has(e["uid"]) and int(e.get("p", -1)) == int(_domanda["id"]):
+				vista.guarda(int(e.get("k", -1)), _domanda)
 		"errore":
 			ui.imposta_qr("", 0, "OPS", "Non riesco a collegarmi: " + str(e.get("msg", "")))
 
@@ -331,6 +335,15 @@ func chiedi(d: Dictionary) -> Dictionary:
 	return r
 
 func _risposta_bot(id: int, uid: String) -> void:
+	if _domanda.get("anteprime", {}).size() and m.trova(uid).get("bot", false):
+		# anche i finti "guardano" un cavallo prima di sceglierlo
+		var k = m.scelta_automatica(_domanda, uid)
+		vista.guarda(int(k), _domanda)
+		await get_tree().create_timer(0.9 / veloce).timeout
+		if _domanda.is_empty() or int(_domanda["id"]) != id or not _risposta.is_empty():
+			return
+		_risposta = {"uid": uid, "k": k}
+		return
 	if _domanda.is_empty() or int(_domanda["id"]) != id or not _risposta.is_empty():
 		return
 	if not _domanda["per"].has(uid):

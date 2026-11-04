@@ -675,13 +675,13 @@ func anima_mossa(cid: int, perc: Array, da: int, velocita := 1.0) -> void:
 			h.basis = h.basis.slerp(base_obj, minf(1.0, dt * 9.0)).orthonormalized()
 			await get_tree().process_frame
 	h.galoppa(false)
+	_segui = h   # resta inquadrato: la vista generale torna all'inizio del turno dopo
 	if perc.size() and perc[-1] >= 0:
 		var fin := _base_dir(dir_cella(perc[-1]))
 		for k in 10:
 			h.basis = h.basis.slerp(fin, 0.3).orthonormalized()
 			await get_tree().process_frame
 	_in_moto.erase(cid)
-	_segui = null
 
 func anima_zoppo(cid: int, cella: int, fuori: bool) -> void:
 	var h: Cavallo3D = cavalli[cid]

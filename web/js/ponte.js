@@ -54,7 +54,7 @@ window.FR = {
       }));
       stacca.push(rete.onFigli(`${RADICE}/${c}/azioni`, {
         aggiunto: (k, v) => {
-          if (v && v.da) coda.push({ e: 'azione', uid: v.da, p: v.p, k: v.k });
+          if (v && v.da) coda.push({ e: v.g ? 'guarda' : 'azione', uid: v.da, p: v.p, k: v.k });
           if (c === codice) rete.remove(`${RADICE}/${c}/azioni/${k}`);
         },
       }));
