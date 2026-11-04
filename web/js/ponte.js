@@ -9,7 +9,8 @@ const parlati = {};
 let pid = 0;
 let rete = null;
 let codice = '';
-let stacca = [];   // per smettere di ascoltare la stanza precedente
+let stacca = [];
+let sigla = null;   // per smettere di ascoltare la stanza precedente
 
 function base() {
   return location.href.split('?')[0].split('#')[0].replace(/index\.html$/, '');
@@ -67,12 +68,20 @@ window.FR = {
   parla(t) {
     const id = ++pid;
     parlati[id] = false;
-    parla(t, { interrompi: true }).then(() => { parlati[id] = true; });
+    if (sigla) sigla.volume = 0.12;
+    parla(t, { interrompi: true }).then(() => { parlati[id] = true; if (sigla && Object.values(parlati).every((x) => x)) sigla.volume = 0.35; });
     return id;
   },
   parlato(id) { return !!parlati[id]; },
   suono(n) { suona(n); },
   voce(v) { setVoce(!!v); },
+  // colonna sonora in loop (si abbassa quando parla il cronista)
+  musica(v) {
+    try {
+      if (!sigla) { sigla = new Audio('audio/sigla.mp3'); sigla.loop = true; sigla.volume = 0.35; }
+      if (v) sigla.play().catch(() => {}); else sigla.pause();
+    } catch (e) { /* ok */ }
+  },
   velocitaVoce(x) { impostaVoce({ vel: Number(x) || 1 }); },
   schermoIntero() {
     const d = document.documentElement;

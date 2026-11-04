@@ -105,7 +105,8 @@ Nella sala d'attesa, **Token o carte**. Con le carte (32 carte del film, in `ass
 
 ## Comandi sulla TV
 
-In alto a sinistra: **Schermo intero**, **Voce sì/no**, **Decidi tu** (se qualcuno si è addormentato: la TV
+In alto a sinistra: **Schermo intero**, **Voce sì/no**, **Musica sì/no** (la sigla del film in loop, che si abbassa
+quando parla il cronista), **Ritratti: a destra / in basso** (cambia al volo la disposizione dello schermo), **Decidi tu** (se qualcuno si è addormentato: la TV
 sceglie al suo posto; lo fa comunque da sola dopo 90 secondi, 25 nella corsa al dado). Se la TV si ricarica,
 nella sala d'attesa compare **Riprendi la corsa interrotta** accanto a **Nuova corsa!**: si riparte dall'ultimo
 turno con la stanza e i telefoni di prima, oppure si ricomincia da capo. Ogni volta che si apre la TV la stanza ha

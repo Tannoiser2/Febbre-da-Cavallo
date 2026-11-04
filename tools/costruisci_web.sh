@@ -9,6 +9,6 @@ mkdir -p build/web
 $GODOT --headless --path . --import >/dev/null 2>&1 || true
 $GODOT --headless --path . --export-release "Web" build/web/index.html
 test -f build/web/index.pck
-cp -r web/telefono.html web/js web/css web/font web/img build/web/
+cp -r web/telefono.html web/js web/css web/font web/img web/audio build/web/
 touch build/web/.nojekyll
 echo "Pronto in build/web"

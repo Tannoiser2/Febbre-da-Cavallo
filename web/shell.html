@@ -64,6 +64,7 @@ async function parti() {
   if (partito) return;
   partito = true;
   sbloccaAudio(); sbloccaVoce(); schermoAcceso();
+  if (localStorage.getItem('fdc_musica') !== 'no') window.FR?.musica(true);
   if (!q.has('noschermo')) {
     const d = document.documentElement;
     try { await (d.requestFullscreen || d.webkitRequestFullscreen)?.call(d); } catch (e) { /* ok */ }

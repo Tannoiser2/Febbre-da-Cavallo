@@ -33,6 +33,9 @@ var pannello_destra: PanelContainer
 var comandi: HBoxContainer
 var bt_decidi: Button
 var bt_voce: Button
+var bt_musica: Button
+var bt_dispo: Button
+var disposizione := "destra"   # "destra": ritratti in colonna a destra; "sotto": in fila in basso
 var sala: Control
 var sala_qr: TextureRect
 var sala_codice: Label
@@ -168,6 +171,12 @@ func _crea_comandi() -> void:
 	bt_voce = bottone("Voce: sì", 22, Color("#3d5a80"))
 	bt_voce.pressed.connect(func(): comando.emit("voce", null))
 	comandi.add_child(bt_voce)
+	bt_musica = bottone("Musica: sì", 22, Color("#3d5a80"))
+	bt_musica.pressed.connect(func(): comando.emit("musica", null))
+	comandi.add_child(bt_musica)
+	bt_dispo = bottone("Ritratti: a destra", 22, Color("#3d5a80"))
+	bt_dispo.pressed.connect(func(): comando.emit("disposizione", null))
+	comandi.add_child(bt_dispo)
 	bt_decidi = bottone("Decidi tu", 22, Color("#6a4c93"))
 	bt_decidi.pressed.connect(func(): comando.emit("decidi", null))
 	bt_decidi.visible = false
@@ -339,6 +348,56 @@ func _crea_giro() -> void:
 	giro_flow.add_theme_constant_override("v_separation", 6)
 	v.add_child(giro_flow)
 
+func imposta_disposizione(d: String, m: Motore) -> void:
+	disposizione = d
+	bt_dispo.text = "Ritratti: a destra" if d == "destra" else "Ritratti: in basso"
+	if d == "destra":
+		giro_box.anchor_left = 1.0
+		giro_box.anchor_right = 1.0
+		giro_box.anchor_top = 0.0
+		giro_box.anchor_bottom = 0.0
+		giro_box.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		giro_box.grow_vertical = Control.GROW_DIRECTION_END
+		giro_box.offset_left = 0
+		giro_box.offset_right = -16
+		giro_box.offset_top = 128
+		giro_box.offset_bottom = 128
+		avatar.offset_top = -420
+		avatar.offset_bottom = 0
+	else:
+		giro_box.anchor_left = 0.5
+		giro_box.anchor_right = 0.5
+		giro_box.anchor_top = 1.0
+		giro_box.anchor_bottom = 1.0
+		giro_box.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		giro_box.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		giro_box.offset_left = 0
+		giro_box.offset_right = 0
+		giro_box.offset_top = -16
+		giro_box.offset_bottom = -16
+		avatar.offset_top = -650
+		avatar.offset_bottom = -230
+	_giro_chiave = ""
+	aggiorna_giro(m)
+	call_deferred("_fissa_giro")
+	call_deferred("_posiziona_fumetto")
+
+## Rimette il riquadro dei ritratti al suo posto (a destra sotto il montepremi, oppure in basso al centro)
+func _fissa_giro() -> void:
+	await get_tree().process_frame
+	giro_box.size = Vector2.ZERO
+	var ms := giro_box.get_combined_minimum_size()
+	if disposizione == "destra":
+		giro_box.offset_left = -16 - ms.x
+		giro_box.offset_right = -16
+		giro_box.offset_top = 128
+		giro_box.offset_bottom = 128 + ms.y
+	else:
+		giro_box.offset_left = -ms.x / 2.0
+		giro_box.offset_right = ms.x / 2.0
+		giro_box.offset_top = -16 - ms.y
+		giro_box.offset_bottom = -16
+
 func _stile_carta(acceso: bool) -> StyleBoxFlat:
 	var s := stile(Color("#fff8e6"), Color("#ffd23f") if acceso else Color("#8a5a2a"), 10, 7 if acceso else 3, acceso)
 	s.content_margin_left = 3
@@ -355,16 +414,24 @@ func aggiorna_giro(m: Motore) -> void:
 	if chiave != _giro_chiave:
 		_giro_chiave = chiave
 		for c in giro_flow.get_children():
+			giro_flow.remove_child(c)
 			c.queue_free()
 		giro_carte = {}
 		# tutti su una fila: più sono, più piccoli (da 150 a 90 pixel)
 		# in colonna sulla destra: una colonna fino a 4 giocatori, poi due
 		var ng := maxi(1, m.giocatori.size())
-		var colonne := 1 if ng <= 4 else 2
-		giro_flow.columns = colonne
-		var righe := int(ceil(float(ng) / colonne))
-		var alto := get_viewport_rect().size.y - 128.0 - 16.0 - 60.0
-		var lato := clampf(alto / righe - 44.0, 70.0, 150.0)
+		var lato := 100.0
+		if disposizione == "destra":
+			# in colonna sulla destra: una colonna fino a 4 giocatori, poi due
+			var colonne := 1 if ng <= 4 else 2
+			giro_flow.columns = colonne
+			var righe := int(ceil(float(ng) / colonne))
+			var alto := get_viewport_rect().size.y - 128.0 - 16.0 - 60.0
+			lato = clampf(alto / righe - 44.0, 70.0, 150.0)
+		else:
+			# tutti in fila in basso, centrati
+			giro_flow.columns = ng
+			lato = clampf((get_viewport_rect().size.x - 120.0) / ng - 18.0, 80.0, 140.0)
 		for g in m.giocatori:
 			var p := PanelContainer.new()
 			p.add_theme_stylebox_override("panel", _stile_carta(false))
@@ -389,6 +456,7 @@ func aggiorna_giro(m: Motore) -> void:
 			timbro.set_anchors_preset(Control.PRESET_TOP_LEFT)
 			giro_flow.add_child(p)
 			giro_carte[g["uid"]] = {"p": p, "r": r, "timbro": timbro}
+		call_deferred("_fissa_giro")
 	for g in m.giocatori:
 		var c: Dictionary = giro_carte.get(g["uid"], {})
 		if c.is_empty():
@@ -631,7 +699,7 @@ func parla(testo: String, posa: String) -> void:
 func _posiziona_fumetto() -> void:
 	fumetto.reset_size()
 	var vp := get_viewport_rect().size
-	var fondo := vp.y - 150.0
+	var fondo := vp.y - 150.0 if disposizione == "destra" else vp.y - 380.0
 	fumetto.position = Vector2(300, fondo - fumetto.size.y)
 
 func zitto() -> void:

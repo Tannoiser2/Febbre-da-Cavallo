@@ -21,6 +21,7 @@ var _in_gioco := false
 var _n_bot := 0
 var _frase := ""
 var _salvata := ""
+var musica_attiva := true
 
 func _ready() -> void:
 	randomize()
@@ -53,6 +54,9 @@ func _ready() -> void:
 	ui.aggiorna_classifica(m)
 	ui.aggiorna_sacchetto(m)
 	ui.aggiorna_mazzo(m)
+	musica_attiva = rete.carica("fdc_musica") != "no"
+	ui.bt_musica.text = "Musica: " + ("sì" if musica_attiva else "no")
+	imposta_disposizione("sotto" if rete.carica("fdc_disposizione") == "sotto" else "destra")
 	if rete.web:
 		# ogni volta che si apre la TV la stanza è nuova (codice nuovo): i telefoni della serata
 		# precedente restano fuori. Solo "Riprendi" torna alla stanza della corsa interrotta.
@@ -202,6 +206,14 @@ func _comando(nome: String, valore) -> void:
 			vista.voce_attiva = not vista.voce_attiva
 			rete.voce(vista.voce_attiva)
 			ui.bt_voce.text = "Voce: " + ("sì" if vista.voce_attiva else "no")
+		"musica":
+			musica_attiva = not musica_attiva
+			rete.musica(musica_attiva)
+			rete.salva("fdc_musica", "" if musica_attiva else "no")
+			ui.bt_musica.text = "Musica: " + ("sì" if musica_attiva else "no")
+		"disposizione":
+			imposta_disposizione("sotto" if ui.disposizione == "destra" else "destra")
+			rete.salva("fdc_disposizione", ui.disposizione)
 		"schermo":
 			rete.schermo_intero()
 		"decidi":
@@ -210,6 +222,12 @@ func _comando(nome: String, valore) -> void:
 			_scelta_fine = "altra"
 		"sala":
 			_scelta_fine = "sala"
+
+## Ritratti a destra (pista spostata a sinistra) oppure in fila in basso (cronista più in alto, pista più a destra)
+func imposta_disposizione(d: String) -> void:
+	ui.imposta_disposizione(d, m)
+	ip.spostamento_ui = Vector2(0.1, 0.12) if d == "destra" else Vector2(-0.12, 0.17)
+	ip.zoom_extra = 1.0 if d == "destra" else 1.12
 
 ## lenta 0.7, normale 1, veloce 1.8: animazioni, attese e voce del cronista
 func imposta_velocita(x: float) -> void:

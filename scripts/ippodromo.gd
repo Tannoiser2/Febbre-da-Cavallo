@@ -27,6 +27,7 @@ var _mesh_cavallo: Mesh
 var _zoppi := {}
 var _in_moto := {}
 var zoom_segui := 0.5
+var zoom_extra := 1.0
 var spostamento_ui := Vector2(0.0, 0.0)   # quanto spostare la vista per lasciare spazio all'interfaccia
 
 func _ready() -> void:
@@ -952,7 +953,7 @@ func _inquadra_tutto(subito := false) -> void:
 	var fov_h := 2.0 * atan(tan(fov_v / 2.0) * aspetto)
 	var d1 := (larg / 2.0) / tan(fov_h / 2.0) * 1.28
 	var d2 := (prof / 2.0) / tan(fov_v / 2.0) * 1.05
-	_cam_dist_obj = maxf(d1, d2)
+	_cam_dist_obj = maxf(d1, d2) * zoom_extra
 	_cam_target_obj = Vector3(spostamento_ui.x * larg, 0, -2.0 + spostamento_ui.y * prof)
 	if subito:
 		_cam_dist = _cam_dist_obj
