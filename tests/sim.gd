@@ -8,6 +8,20 @@ func _init() -> void:
 	if args.size():
 		n = int(args[0])
 	# controlli sulla pista
+	var rng := RandomNumberGenerator.new()
+	for i in 30:
+		var ps := Pista.a_sorpresa(2 + i % 3, rng)
+		var a: Vector2 = ps.punto(0.0, Pista.R0)
+		var b: Vector2 = ps.punto(ps.lunghezza - 0.001, Pista.R0)
+		if a.distance_to(b) > 0.05:
+			_err += 1
+			print("pista non chiusa ", ps.pezzi)
+		# ogni casella deve poter andare avanti
+		for c in ps.celle:
+			if ps.passi_avanti(c["id"]).is_empty():
+				_err += 1
+				print("vicolo cieco ", c, ps.pezzi)
+	print("piste a sorpresa: ok, es. ", Pista.a_sorpresa(3, rng).pezzi)
 	for r in [2, 4, 6]:
 		var p := Pista.new(r)
 		var tot := []

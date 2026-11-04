@@ -78,7 +78,10 @@ rientra Disattivo al turno successivo dei cavalli. Nella sala d'attesa si scegli
 ## La versione con le carte
 
 Nella sala d'attesa, **Token o carte**. Con le carte (32 carte del film, in `assets/carte`):
-- la pista è fatta con i pezzi di rettilineo da 3 file (come i pezzi della scatola a carte) e le curve;
+- la pista si compone **a ogni corsa** con i pezzi: rettilineo (3 corsie, 3 file), strettoia (la corsia interna è
+  siepe: 2 corsie), curve da 45 gradi (caselle 1, 1, 2), 90 (1, 2, 3) e 180 (2, 3, 4); le due testate escono a
+  caso (180, 90+90, 90+45+45, 45+90+45, quattro da 45) e c'è una strettoia per lato. Pista corta, media o lunga =
+  2, 3 o 4 pezzi dritti per lato;
 - col pallino verde, se il cavallo **non è in curva** e nella sua colonna non c'è già una carta, si pesca una carta:
   si esegue l'effetto **di sopra**, poi la carta va sotto la pista e ne spunta solo la parte di sotto;
 - quando un cavallo finisce in una colonna con una carta, si esegue l'effetto **di sotto**; se c'è scritto

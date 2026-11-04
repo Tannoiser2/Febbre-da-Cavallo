@@ -219,8 +219,10 @@ func _linea_arrivo(r_in: float, r_out: float) -> void:
 	m.albedo_texture = tex
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	mi.material_override = m
-	var x := -pista.lato / 2.0
-	mi.position = Vector3(x, 0.045, (r_in + r_out) / 2.0)
+	var p0 := pista.punto(0.0, Pista.R0)
+	var x := p0.x
+	var oz := p0.y - Pista.R0     # la partenza è sempre su un rettilineo verso +X
+	mi.position = Vector3(x, 0.045, oz + (r_in + r_out) / 2.0)
 	_mondo_pista.add_child(mi)
 	# arco d'arrivo
 	var legno := _mat(Color("#f4f4f4"), 0.6)
@@ -233,14 +235,14 @@ func _linea_arrivo(r_in: float, r_out: float) -> void:
 		cm.height = 7.5
 		palo.mesh = cm
 		palo.material_override = legno
-		palo.position = Vector3(x, 3.75, z)
+		palo.position = Vector3(x, 3.75, oz + z)
 		_mondo_pista.add_child(palo)
 	var trave := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = Vector3(0.35, 1.9, r_out - r_in + 2.6)
 	trave.mesh = bm
 	trave.material_override = rosso
-	trave.position = Vector3(x, 7.0, (r_in + r_out) / 2.0)
+	trave.position = Vector3(x, 7.0, oz + (r_in + r_out) / 2.0)
 	_mondo_pista.add_child(trave)
 	# la scritta sta sullo striscione, sui due lati
 	for lato in [-1.0, 1.0]:
@@ -252,7 +254,7 @@ func _linea_arrivo(r_in: float, r_out: float) -> void:
 		scritta.modulate = Color("#ffd23f")
 		scritta.outline_size = 14
 		scritta.outline_modulate = Color("#5a0a0a")
-		scritta.position = Vector3(x + lato * 0.19, 7.0, (r_in + r_out) / 2.0)
+		scritta.position = Vector3(x + lato * 0.19, 7.0, oz + (r_in + r_out) / 2.0)
 		scritta.rotation_degrees.y = 90.0 * lato
 		scritta.double_sided = false
 		_mondo_pista.add_child(scritta)
@@ -325,8 +327,8 @@ func _steccato(r: float, esterno: bool) -> void:
 
 func _tribuna(r_out: float) -> void:
 	# tribuna dietro il rettilineo lontano (in alto), con il pubblico colorato
-	var lung := pista.lato + 8.0
-	var z0 := -(r_out + 4.0)
+	var lung := pista.massimo.x - pista.minimo.x - 6.0
+	var z0 := pista.minimo.y - 3.6
 	var cemento := _mat(Color("#c9c2b4"), 0.95)
 	for g in 5:
 		var gr := MeshInstance3D.new()
@@ -438,24 +440,41 @@ func _siepe() -> void:
 	m.roughness = 1.0
 	var alto := 1.3
 	var r := 1.25
-	var corpo := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = Vector3(pista.lato, alto, r * 2.0)
-	corpo.mesh = bm
+	# la siepe segue la linea di mezzo del prato interno (r = 0): dritta lungo i rettilinei,
+	# un cespuglio tondo dove le curve hanno il centro
+	var lungo := []
+	var k := int(pista.lunghezza / 1.0)
+	for i in k:
+		var q := pista.punto(pista.lunghezza * i / k, 0.0)
+		var nuovo := true
+		for x in lungo:
+			if x.distance_to(q) < 0.9:
+				nuovo = false
+				break
+		if nuovo:
+			lungo.append(q)
+	# nelle strettoie la corsia interna è siepe
+	var strette := []
+	for sg in pista.segmenti:
+		if sg["pezzo"] == "S":
+			var ss: float = sg["s0"] + 0.6
+			while ss < sg["s1"] - 0.5:
+				strette.append(pista.punto(ss, Pista.R0 + Pista.LARG_CORSIA * 0.5))
+				ss += 0.9
+	lungo.append_array(strette)
+	var mmb := MultiMesh.new()
+	mmb.transform_format = MultiMesh.TRANSFORM_3D
+	var sfera := SphereMesh.new()
+	sfera.radius = r
+	sfera.height = alto * 1.6
+	mmb.mesh = sfera
+	mmb.instance_count = lungo.size()
+	for i in lungo.size():
+		mmb.set_instance_transform(i, Transform3D(Basis().scaled(Vector3(1.0, 1.0, 1.0)), Vector3(lungo[i].x, alto * 0.45, lungo[i].y)))
+	var corpo := MultiMeshInstance3D.new()
+	corpo.multimesh = mmb
 	corpo.material_override = m
-	corpo.position = Vector3(0, alto / 2.0, 0)
 	_mondo_pista.add_child(corpo)
-	for sx in [-1.0, 1.0]:
-		var testa := MeshInstance3D.new()
-		var cm := CylinderMesh.new()
-		cm.top_radius = r
-		cm.bottom_radius = r
-		cm.height = alto
-		cm.radial_segments = 20
-		testa.mesh = cm
-		testa.material_override = m
-		testa.position = Vector3(sx * pista.lato / 2.0, alto / 2.0, 0)
-		_mondo_pista.add_child(testa)
 	var colori := [Color("#d62828"), Color("#ffd23f"), Color("#ffffff")]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 11
@@ -468,12 +487,12 @@ func _siepe() -> void:
 		sf.radial_segments = 8
 		sf.rings = 4
 		mm.mesh = sf
-		var n := int(pista.lato / 2.5)
+		var n := int(lungo.size() / 2.5) + 1
 		mm.instance_count = n
 		for i in n:
-			var x := rng.randf_range(-pista.lato / 2.0, pista.lato / 2.0)
-			var z := rng.randf_range(-r, r) * 0.9
-			mm.set_instance_transform(i, Transform3D(Basis(), Vector3(x, alto + 0.02, z)))
+			var q: Vector2 = lungo[rng.randi() % lungo.size()]
+			var dd := Vector2(rng.randf_range(-0.9, 0.9), rng.randf_range(-0.9, 0.9))
+			mm.set_instance_transform(i, Transform3D(Basis(), Vector3(q.x + dd.x, alto * 1.05, q.y + dd.y)))
 		var mi := MultiMeshInstance3D.new()
 		mi.multimesh = mm
 		var mc := StandardMaterial3D.new()
@@ -488,8 +507,9 @@ func _alberi(_r_in: float, r_out: float) -> void:
 	# alberi di Natale nel prato interno e ai lati
 	_siepe()
 	for s in [-1.0, 1.0]:
-		_albero(Vector3(s * (pista.lato / 2.0 + r_out + 5.0), 0, -3), 2.0)
-		_albero(Vector3(s * (pista.lato / 2.0 + r_out + 8.0), 0, 4), 1.6)
+		var xb := pista.massimo.x if s > 0 else pista.minimo.x
+		_albero(Vector3(xb + s * 5.0, 0, -3), 2.0)
+		_albero(Vector3(xb + s * 8.0, 0, 4), 1.6)
 
 # ------------------------------------------------------------------ posizioni
 ## I token stanno fuori dalla pista, sul prato accanto al bordo esterno, all'altezza della loro colonna
@@ -507,8 +527,8 @@ func pos_cella(id: int) -> Vector3:
 ## Recinto di partenza: in fila sul prato davanti al primo rettilineo, fuori dalla pista
 func pos_partenza(cid: int) -> Vector3:
 	var r_out := Pista.R0 + Pista.CORSIE * Pista.LARG_CORSIA + Pista.BORDO
-	var x := -pista.lato / 2.0 + 1.6 + cid * 3.1
-	return Vector3(x, 0.04, r_out + (4.4 if cid % 2 == 0 else 6.6))
+	var q := pista.punto(1.6 + cid * 3.1, r_out + (4.4 if cid % 2 == 0 else 6.6))
+	return Vector3(q.x, 0.04, q.y)
 
 func pos_cavallo(cid: int, cella: int) -> Vector3:
 	if cella == Pista.PARTENZA:
@@ -924,9 +944,8 @@ func evidenzia_cavalli(ids: Array) -> void:
 
 # ------------------------------------------------------------------ telecamera
 func _inquadra_tutto(subito := false) -> void:
-	var r_out := Pista.R0 + Pista.CORSIE * Pista.LARG_CORSIA + 1.5
-	var larg := pista.lato + 2.0 * r_out + 6.0
-	var prof := 2.0 * r_out + 8.0
+	var larg := pista.massimo.x - pista.minimo.x + 6.0
+	var prof := pista.massimo.y - pista.minimo.y + 8.0
 	var vp := get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1920, 1080)
 	var aspetto := vp.x / maxf(1.0, vp.y)
 	var fov_v := deg_to_rad(cam.fov)

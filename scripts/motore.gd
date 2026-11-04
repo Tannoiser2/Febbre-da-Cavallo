@@ -111,9 +111,15 @@ func togli_giocatore(uid: String) -> void:
 			return
 
 # ------------------------------------------------------------------ preparazione
+## Con i token l'ovale classico; con le carte una pista composta con i pezzi (rettilinei, strettoie e curve
+## da 45, 90 e 180 gradi), diversa a ogni corsa
 func nuova_pista() -> Pista:
-	# con le carte i rettilinei sono i pezzi da 3 file (8 pezzi nella scatola), con i token da 4
-	return Pista.new(int(cfg["rettilinei"]) + (2 if carte() else 0), 3 if carte() else 4)
+	if carte():
+		var rng := RandomNumberGenerator.new()
+		rng.randomize()
+		var dritti: int = {2: 2, 4: 3, 6: 4}.get(int(cfg["rettilinei"]), 3)
+		return Pista.a_sorpresa(dritti, rng)
+	return Pista.new(int(cfg["rettilinei"]), 4)
 
 func prepara_corsa() -> void:
 	pista = nuova_pista()
@@ -1004,11 +1010,14 @@ func segreto(uid: String) -> Dictionary:
 func salva() -> Dictionary:
 	return {"cfg": cfg, "fase": fase, "giocatori": giocatori, "cavalli": cavalli, "token": token, "sacchetto": sacchetto,
 		"pile": pile, "n_corsa": n_corsa, "n_turno": n_turno, "salta": salta_prossimo, "ultimo": ultimo_uid, "giro": giro,
-		"mazzo": mazzo, "extra": extra_montepremi}
+		"mazzo": mazzo, "extra": extra_montepremi, "pezzi": pista.pezzi}
 
 func carica(s: Dictionary) -> void:
 	cfg.merge(s["cfg"], true)
-	pista = nuova_pista()
+	if s.has("pezzi") and carte():
+		pista = Pista.new(0, 3, s["pezzi"])
+	else:
+		pista = nuova_pista()
 	fase = s["fase"]
 	giocatori = s["giocatori"]
 	cavalli = []
