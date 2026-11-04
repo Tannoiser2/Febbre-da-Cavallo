@@ -25,6 +25,8 @@ var dadi_box: HBoxContainer
 var presi_box: HBoxContainer      # corsa al dado: i dadi già presi, con il nome di chi li ha presi
 var _dadi_ws := []
 var _presi_nome := {}
+var zona_attuale := Rect2()
+const FASCIA_DADI := 250.0   # spazio sotto la pista riservato ai dadi
 var classifica: VBoxContainer
 var righe_cavalli := []
 var lista_giocatori: VBoxContainer
@@ -398,11 +400,11 @@ func aree_libere() -> Array:
 	var sotto_tasti := comandi.position.y + comandi.size.y + 12.0
 	if disposizione == "destra":
 		var dx := (giro_box.size.x + 32.0) if giro_box.visible else 360.0
-		return [Rect2(crono_w, top, vp.x - dx - crono_w, vp.y - top - 16.0),
+		return [Rect2(crono_w, top, vp.x - dx - crono_w, vp.y - top - 16.0 - FASCIA_DADI),
 			Rect2(16.0, sotto_tasti, vp.x - dx - 16.0, vp.y - sotto_tasti - crono_h)]
 	var hb := (giro_box.size.y + 32.0) if giro_box.visible else 240.0
-	return [Rect2(crono_w, top, vp.x - crono_w - 16.0, vp.y - top - hb),
-		Rect2(16.0, sotto_tasti, vp.x - 32.0, vp.y - sotto_tasti - maxf(hb, crono_h))]
+	return [Rect2(crono_w, top, vp.x - crono_w - 16.0, vp.y - top - hb - FASCIA_DADI),
+		Rect2(16.0, sotto_tasti, vp.x - 32.0, vp.y - sotto_tasti - maxf(hb + FASCIA_DADI, crono_h))]
 
 ## Centro (sullo schermo) del ritratto di un giocatore, per farci volare il dado
 func centro_ritratto(uid: String) -> Vector2:
@@ -643,7 +645,20 @@ func _testo_dado(l: Label, f: Dictionary) -> void:
 		l.add_theme_font_size_override("font_size", 84)
 
 ## Dopo il lancio sulla pista il risultato si ingrandisce al centro dello schermo, poi va in alto
-func mostra_dadi(facce: Array, _suono: Callable, verso := Vector2(-1, -1)) -> void:
+## La parte bassa dello schermo libera tra la pista e l'interfaccia, dove vanno i dadi
+func zona_dadi(pista_r: Rect2) -> Rect2:
+	var vp := get_viewport_rect().size
+	var x0 := 400.0
+	var x1 := vp.x - 16.0
+	var y1 := vp.y - 16.0
+	if disposizione == "destra":
+		x1 = vp.x - ((giro_box.size.x + 32.0) if giro_box.visible else 360.0)
+	else:
+		y1 = vp.y - ((giro_box.size.y + 32.0) if giro_box.visible else 240.0)
+	var y0 := clampf(pista_r.end.y + 12.0, 240.0, y1 - 150.0)
+	return Rect2(x0, y0, x1 - x0, y1 - y0)
+
+func mostra_dadi(facce: Array, _suono: Callable, verso := Vector2(-1, -1), zona := Rect2()) -> void:
 	togli_dadi()
 	if facce.is_empty():
 		return
@@ -656,12 +671,17 @@ func mostra_dadi(facce: Array, _suono: Callable, verso := Vector2(-1, -1)) -> vo
 	move_child(dadi_box, -1)
 	await get_tree().process_frame
 	dadi_box.reset_size()
-	var finale := minf(1.0, (size.x - 560.0) / maxf(1.0, dadi_box.size.x))
-	var alto_x := size.x / 2.0 - dadi_box.size.x / 2.0 - 120
-	var grande := minf(2.0, (size.x - 120.0) / maxf(1.0, dadi_box.size.x))
+	if zona.size.x <= 0:
+		zona = Rect2(0, 190, size.x, size.y - 190)
+	zona_attuale = zona
+	var bw := maxf(1.0, dadi_box.size.x)
+	# i dadi restano nella parte bassa: grandi quanto lo spazio permette
+	var grande := minf(2.0, minf((zona.size.x - 20.0) / bw, (zona.size.y - 10.0) / 200.0))
+	var finale := minf(1.0, minf((zona.size.x - 20.0) / bw, (zona.size.y / 2.0 - 10.0) / 200.0))
+	var alto_x := zona.get_center().x - bw / 2.0
 	dadi_box.set_meta("scala", finale)
-	dadi_box.pivot_offset = Vector2(dadi_box.size.x / 2.0, 75)
-	dadi_box.position = Vector2(size.x / 2.0 - dadi_box.size.x / 2.0, size.y / 2.0 - 75)
+	dadi_box.pivot_offset = Vector2(bw / 2.0, 75)
+	dadi_box.position = Vector2(zona.get_center().x - bw / 2.0, zona.get_center().y - 75)
 	dadi_box.scale = Vector2(0.2, 0.2)
 	dadi_box.modulate = Color(1, 1, 1, 0)
 	var tw := create_tween()
@@ -675,7 +695,8 @@ func mostra_dadi(facce: Array, _suono: Callable, verso := Vector2(-1, -1)) -> vo
 		tw.parallel().tween_property(dadi_box, "position", verso - dadi_box.pivot_offset + Vector2(0, 20), 0.45).set_trans(Tween.TRANS_CUBIC)
 	else:
 		tw.tween_property(dadi_box, "scale", Vector2(finale, finale), 0.4).set_trans(Tween.TRANS_CUBIC)
-		tw.parallel().tween_property(dadi_box, "position", Vector2(alto_x, 190), 0.4).set_trans(Tween.TRANS_CUBIC)
+		# corsa al dado: i dadi in palio in alto nella zona, quelli presi scendono sotto
+		tw.parallel().tween_property(dadi_box, "position", Vector2(alto_x, zona.position.y - 75.0 + 75.0 * finale + 4.0), 0.4).set_trans(Tween.TRANS_CUBIC)
 	await tw.finished
 
 ## Corsa al dado: il dado preso scende nella fila di sotto con il nome di chi l'ha preso
@@ -705,10 +726,15 @@ func evidenzia_preso(nome: String) -> void:
 func _centra(box: Control) -> void:
 	await get_tree().process_frame
 	box.reset_size()
-	var sc := minf(1.0, (size.x - 560.0) / maxf(1.0, box.size.x))
+	var z := zona_attuale if zona_attuale.size.x > 0 else Rect2(0, 190, size.x, size.y - 190)
+	var sc := minf(1.0, minf((z.size.x - 20.0) / maxf(1.0, box.size.x), (z.size.y / 2.0 - 10.0) / 200.0))
 	box.pivot_offset = Vector2(box.size.x / 2.0, 0)
 	box.scale = Vector2(sc, sc)
-	box.position.x = size.x / 2.0 - box.size.x / 2.0 - 120
+	box.position.x = z.get_center().x - box.size.x / 2.0
+	if box == presi_box:
+		box.position.y = z.position.y + z.size.y / 2.0 + 4.0
+	else:
+		box.position.y = z.position.y + 4.0
 
 func togli_dadi() -> void:
 	dadi_box.scale = Vector2.ONE

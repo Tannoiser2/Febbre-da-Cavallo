@@ -92,10 +92,11 @@ func estrazione_multipla(uids: Array) -> void:
 
 func dado(facce: Array) -> void:
 	ui.togli_dadi()
-	var nodi: Array = await ip.lancia_dadi(facce, func(): rete.suono("dado"), main.veloce)
+	var zona := ui.zona_dadi(ip.rettangolo_pista())
+	var nodi: Array = await ip.lancia_dadi(facce, func(): rete.suono("dado"), main.veloce, zona)
 	await _attendi(0.3)
 	var verso := ui.centro_ritratto(m.di_turno) if facce.size() == 1 and m.di_turno != "" else Vector2(-1, -1)
-	await ui.mostra_dadi(facce, func(): pass, verso)
+	await ui.mostra_dadi(facce, func(): pass, verso, zona)
 	ip.togli_dadi_3d(nodi)
 	if facce.size() == 1 and facce[0].get("v", false):
 		rete.suono("verde")

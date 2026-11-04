@@ -743,14 +743,44 @@ func _nodo_dado() -> Node3D:
 	return d
 
 ## Tira i dadi davvero: rotolano sulla pista e si fermano con la faccia giusta in alto
-func lancia_dadi(facce: Array, suono: Callable, velocita := 1.0) -> Array:
+## Dove sta la pista sullo schermo (pixel), per mettere i dadi sotto senza coprirla
+func rettangolo_pista() -> Rect2:
+	var r := Rect2()
+	var primo := true
+	var mn: Vector2 = pista.minimo
+	var mx: Vector2 = pista.massimo + Vector2(0, 8.0)   # compresi i cavalli fermi alla partenza, sotto la pista
+	for p in [Vector3(mn.x, 0, mn.y), Vector3(mx.x, 0, mn.y), Vector3(mn.x, 0, mx.y), Vector3(mx.x, 0, mx.y)]:
+		var q := cam.unproject_position(p)
+		if primo:
+			r = Rect2(q, Vector2.ZERO)
+			primo = false
+		else:
+			r = r.expand(q)
+	return r
+
+## Punto del prato che si vede in quel punto dello schermo
+func punto_a_terra(schermo: Vector2) -> Vector3:
+	var o := cam.project_ray_origin(schermo)
+	var d := cam.project_ray_normal(schermo)
+	if absf(d.y) < 0.001:
+		return _cam_target
+	return o + d * (-o.y / d.y)
+
+func lancia_dadi(facce: Array, suono: Callable, velocita := 1.0, zona := Rect2()) -> Array:
 	var dadi := []
 	var arrivi := []
 	var n := facce.size()
 	for k in n:
 		var d := _nodo_dado()
 		add_child(d)
-		var centro := _cam_target + Vector3((k - (n - 1) / 2.0) * 5.6, 0, 4.0)
+		var base := _cam_target + Vector3(0, 0, 4.0)
+		var passo := 5.6
+		if zona.size.x > 0:
+			# i dadi rotolano sul prato sotto la pista
+			base = punto_a_terra(zona.get_center())
+			var b := punto_a_terra(zona.get_center() + Vector2(zona.size.x / maxf(1.0, n), 0))
+			passo = minf(5.6, base.distance_to(b))
+		var centro := base + Vector3((k - (n - 1) / 2.0) * passo, 0, 0)
 		var inizio := centro + Vector3(randf_range(-8, 8), 9.0, 16.0)
 		d.position = inizio
 		d.rotation = Vector3(randf() * TAU, randf() * TAU, randf() * TAU)
