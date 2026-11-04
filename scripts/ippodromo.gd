@@ -28,6 +28,7 @@ var _zoppi := {}
 var _in_moto := {}
 var zoom_segui := 0.5
 var zoom_extra := 1.0
+var aree_libere := []   # rettangoli dello schermo (pixel) liberi dall'interfaccia: la pista si allarga nel migliore
 var spostamento_ui := Vector2(0.0, 0.0)   # quanto spostare la vista per lasciare spazio all'interfaccia
 
 func _ready() -> void:
@@ -951,10 +952,31 @@ func _inquadra_tutto(subito := false) -> void:
 	var aspetto := vp.x / maxf(1.0, vp.y)
 	var fov_v := deg_to_rad(cam.fov)
 	var fov_h := 2.0 * atan(tan(fov_v / 2.0) * aspetto)
-	var d1 := (larg / 2.0) / tan(fov_h / 2.0) * 1.28
-	var d2 := (prof / 2.0) / tan(fov_v / 2.0) * 1.05
-	_cam_dist_obj = maxf(d1, d2) * zoom_extra
-	_cam_target_obj = Vector3(spostamento_ui.x * larg, 0, -2.0 + spostamento_ui.y * prof)
+	var pitch := deg_to_rad(52.0)
+	if aree_libere.is_empty():
+		var d1 := (larg / 2.0) / tan(fov_h / 2.0) * 1.28
+		var d2 := (prof / 2.0) / tan(fov_v / 2.0) * 1.05
+		_cam_dist_obj = maxf(d1, d2) * zoom_extra
+		_cam_target_obj = Vector3(spostamento_ui.x * larg, 0, -2.0 + spostamento_ui.y * prof)
+	else:
+		# la pista occupa tutto il rettangolo libero più grande, centrata in esso
+		var best := 1.0e9
+		var bt := Vector3.ZERO
+		for a in aree_libere:
+			var r: Rect2 = a
+			var fx := r.size.x / vp.x
+			var fy := r.size.y / vp.y
+			if fx <= 0.05 or fy <= 0.05:
+				continue
+			var dd := maxf(larg / (2.0 * tan(fov_h / 2.0) * fx), prof * sin(pitch) * 1.1 / (2.0 * tan(fov_v / 2.0) * fy)) * 1.04
+			if dd < best:
+				best = dd
+				var wv := 2.0 * dd * tan(fov_h / 2.0)
+				var hv := 2.0 * dd * tan(fov_v / 2.0)
+				var c := r.get_center()
+				bt = Vector3(-(c.x - vp.x / 2.0) / vp.x * wv, 0, -1.0 - (c.y - vp.y / 2.0) / vp.y * hv / sin(pitch))
+		_cam_dist_obj = best
+		_cam_target_obj = bt
 	if subito:
 		_cam_dist = _cam_dist_obj
 		_cam_target = _cam_target_obj

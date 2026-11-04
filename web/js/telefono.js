@@ -272,6 +272,12 @@ function disegna() {
   app.querySelectorAll('[data-k]').forEach((b) => {
     b.onclick = () => rispondi(b.getAttribute('data-k'));
   });
+  // i titoli stanno su una riga: se non ci stanno si rimpiccioliscono
+  app.querySelectorAll('.domanda h2, .tocca').forEach((el) => {
+    el.style.whiteSpace = 'nowrap';
+    let fs = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > el.clientWidth + 1 && fs > 15) { fs -= 1; el.style.fontSize = fs + 'px'; }
+  });
   const m = app.querySelector('#mostra');
   if (m) m.onclick = () => { mostraTal = !mostraTal; disegna(); };
 }

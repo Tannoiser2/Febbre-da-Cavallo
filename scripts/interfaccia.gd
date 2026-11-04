@@ -64,6 +64,9 @@ var velocita := 1.0
 var giro_box: PanelContainer        # in basso a destra: i ritratti dei giocatori, chi ha già giocato nel giro
 var giro_flow: GridContainer
 var quota_lbl: Label
+var qr_box: PanelContainer
+var qr_mini: TextureRect
+var qr_codice: Label
 var giro_carte := {}                # uid -> {p, ritratto, nome, timbro}
 var _giro_chiave := ""
 var _tex_ritratti := {}
@@ -90,6 +93,7 @@ func _ready() -> void:
 	_crea_avatar()
 	_crea_comandi()
 	_crea_giro()
+	_crea_qr_mini()
 	_crea_sala()
 	_crea_pile()
 	move_child(avatar, -1)
@@ -351,6 +355,61 @@ func _crea_giro() -> void:
 	giro_flow.add_theme_constant_override("v_separation", 6)
 	v.add_child(giro_flow)
 
+## QR code piccolo accanto al montepremi: chi perde la connessione lo inquadra e rientra nella partita
+func _crea_qr_mini() -> void:
+	qr_box = PanelContainer.new()
+	var st := stile(Color(1.0, 0.96, 0.84, 0.94), ROSSO, 16, 4)
+	st.content_margin_left = 8
+	st.content_margin_right = 8
+	st.content_margin_top = 6
+	st.content_margin_bottom = 6
+	qr_box.add_theme_stylebox_override("panel", st)
+	qr_box.anchor_left = 1.0
+	qr_box.anchor_right = 1.0
+	qr_box.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	qr_box.offset_right = -370
+	qr_box.offset_top = 16
+	qr_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	qr_box.visible = false
+	add_child(qr_box)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 8)
+	qr_box.add_child(h)
+	qr_mini = TextureRect.new()
+	qr_mini.custom_minimum_size = Vector2(150, 150)
+	qr_mini.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	qr_mini.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	h.add_child(qr_mini)
+	var v := VBoxContainer.new()
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_child(v)
+	v.add_child(etichetta("PER RIENTRARE", f_titolo, 22, ROSSO))
+	qr_codice = etichetta("", f_titolo, 46, SCURO)
+	v.add_child(qr_codice)
+
+## Le parti dello schermo dove la pista può stare senza finire sotto l'interfaccia (due possibilità:
+## la pista accanto al cronista, oppure sopra di lui); la TV usa quella che la fa più grande
+func aree_libere() -> Array:
+	var vp := get_viewport_rect().size
+	var top := 236.0
+	var crono_w := 400.0
+	var crono_h := 640.0
+	if disposizione == "destra":
+		var dx := (giro_box.size.x + 32.0) if giro_box.visible else 360.0
+		return [Rect2(crono_w, top, vp.x - dx - crono_w, vp.y - top - 16.0),
+			Rect2(16.0, top, vp.x - dx - 16.0, vp.y - top - crono_h)]
+	var hb := (giro_box.size.y + 32.0) if giro_box.visible else 240.0
+	return [Rect2(crono_w, top, vp.x - crono_w - 16.0, vp.y - top - hb),
+		Rect2(16.0, top, vp.x - 32.0, vp.y - top - maxf(hb, crono_h))]
+
+## Centro (sullo schermo) del ritratto di un giocatore, per farci volare il dado
+func centro_ritratto(uid: String) -> Vector2:
+	var c: Dictionary = giro_carte.get(uid, {})
+	if c.is_empty() or not giro_box.visible:
+		return Vector2(-1, -1)
+	var p: Control = c["p"]
+	return p.get_global_rect().get_center()
+
 func imposta_disposizione(d: String, m: Motore) -> void:
 	disposizione = d
 	bt_dispo.text = "Ritratti: a destra" if d == "destra" else "Ritratti: in basso"
@@ -432,11 +491,11 @@ func aggiorna_giro(m: Motore) -> void:
 			giro_flow.columns = colonne
 			var righe := int(ceil(float(ng) / colonne))
 			var alto := get_viewport_rect().size.y - 128.0 - 16.0 - 60.0
-			lato = clampf(alto / righe - 44.0, 70.0, 150.0)
+			lato = clampf(alto / righe - 44.0, 70.0, 200.0)
 		else:
 			# tutti in fila in basso, centrati
 			giro_flow.columns = ng
-			lato = clampf((get_viewport_rect().size.x - 460.0) / ng - 18.0, 80.0, 140.0)
+			lato = clampf((get_viewport_rect().size.x - 460.0) / ng - 18.0, 80.0, minf(200.0, get_viewport_rect().size.y * 0.16))
 		for g in m.giocatori:
 			var p := PanelContainer.new()
 			p.add_theme_stylebox_override("panel", _stile_carta(false))
@@ -582,7 +641,7 @@ func _testo_dado(l: Label, f: Dictionary) -> void:
 		l.add_theme_font_size_override("font_size", 84)
 
 ## Dopo il lancio sulla pista il risultato si ingrandisce al centro dello schermo, poi va in alto
-func mostra_dadi(facce: Array, _suono: Callable) -> void:
+func mostra_dadi(facce: Array, _suono: Callable, verso := Vector2(-1, -1)) -> void:
 	togli_dadi()
 	if facce.is_empty():
 		return
@@ -592,6 +651,7 @@ func mostra_dadi(facce: Array, _suono: Callable) -> void:
 		dadi_box.add_child(w)
 		ws.append(w)
 	_dadi_ws = ws
+	move_child(dadi_box, -1)
 	await get_tree().process_frame
 	dadi_box.reset_size()
 	var finale := minf(1.0, (size.x - 560.0) / maxf(1.0, dadi_box.size.x))
@@ -606,8 +666,14 @@ func mostra_dadi(facce: Array, _suono: Callable) -> void:
 	tw.tween_property(dadi_box, "scale", Vector2(grande, grande), 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.parallel().tween_property(dadi_box, "modulate", Color.WHITE, 0.2)
 	tw.tween_interval(0.9 / velocita)
-	tw.tween_property(dadi_box, "scale", Vector2(finale, finale), 0.4).set_trans(Tween.TRANS_CUBIC)
-	tw.parallel().tween_property(dadi_box, "position", Vector2(alto_x, 190), 0.4).set_trans(Tween.TRANS_CUBIC)
+	if verso.x >= 0:
+		# il dado vola sul ritratto di chi l'ha tirato e ci resta, piccolo, finché gioca
+		var sc := 0.55
+		tw.tween_property(dadi_box, "scale", Vector2(sc, sc), 0.45).set_trans(Tween.TRANS_CUBIC)
+		tw.parallel().tween_property(dadi_box, "position", verso - dadi_box.pivot_offset + Vector2(0, 20), 0.45).set_trans(Tween.TRANS_CUBIC)
+	else:
+		tw.tween_property(dadi_box, "scale", Vector2(finale, finale), 0.4).set_trans(Tween.TRANS_CUBIC)
+		tw.parallel().tween_property(dadi_box, "position", Vector2(alto_x, 190), 0.4).set_trans(Tween.TRANS_CUBIC)
 	await tw.finished
 
 ## Corsa al dado: il dado preso scende nella fila di sotto con il nome di chi l'ha preso
@@ -973,19 +1039,20 @@ func mostra_carta(k: int, sotto: bool) -> void:
 	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	var vp := get_viewport_rect().size
-	var sz := Vector2(560, 268) if sotto else Vector2(340, 524)
+	var alto := vp.y * 0.72
+	var sz := Vector2(minf(vp.x * 0.6, alto * 1.4), minf(vp.x * 0.6, alto * 1.4) / 2.09) if sotto else Vector2(alto * 0.648, alto)
 	t.size = sz
 	t.pivot_offset = sz / 2.0
-	t.position = Vector2(vp.x / 2.0 - sz.x / 2.0 - 120, vp.y / 2.0 - sz.y / 2.0)
+	t.position = Vector2(vp.x / 2.0 - sz.x / 2.0, vp.y / 2.0 - sz.y / 2.0 + 40.0)
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	t.scale = Vector2(0.1, 0.1)
 	add_child(t)
 	var tw := create_tween()
 	tw.tween_property(t, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_interval(2.2 / velocita)
+	tw.tween_interval(3.2 / velocita)
 	tw.tween_property(t, "scale", Vector2(0.05, 0.05), 0.25)
 	tw.tween_callback(t.queue_free)
-	await get_tree().create_timer(0.8 / velocita).timeout
+	await get_tree().create_timer(1.8 / velocita).timeout
 
 func imposta_opzione(chiave: String, valore) -> void:
 	for b in sala_opzioni.get(chiave, []):
@@ -993,6 +1060,7 @@ func imposta_opzione(chiave: String, valore) -> void:
 
 func mostra_sala(si: bool) -> void:
 	sala.visible = si
+	qr_box.visible = not si and qr_mini.texture != null
 	if si:
 		fumetto.visible = false
 	pannello_destra.visible = not si
@@ -1000,6 +1068,7 @@ func mostra_sala(si: bool) -> void:
 
 func imposta_qr(bits: String, n: int, codice: String, url: String) -> void:
 	sala_codice.text = codice
+	qr_codice.text = codice
 	sala_url.text = url
 	if n <= 0:
 		sala_qr.texture = null
@@ -1012,6 +1081,7 @@ func imposta_qr(bits: String, n: int, codice: String, url: String) -> void:
 			if bits[y * n + x] == "1":
 				img.set_pixel(x + bordo, y + bordo, SCURO)
 	sala_qr.texture = ImageTexture.create_from_image(img)
+	qr_mini.texture = sala_qr.texture
 
 func aggiorna_sala(m: Motore) -> void:
 	for c in sala_giocatori.get_children():

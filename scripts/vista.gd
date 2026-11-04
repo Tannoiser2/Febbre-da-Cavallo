@@ -93,7 +93,8 @@ func dado(facce: Array) -> void:
 	ui.togli_dadi()
 	var nodi: Array = await ip.lancia_dadi(facce, func(): rete.suono("dado"), main.veloce)
 	await _attendi(0.3)
-	await ui.mostra_dadi(facce, func(): pass)
+	var verso := ui.centro_ritratto(m.di_turno) if facce.size() == 1 and m.di_turno != "" else Vector2(-1, -1)
+	await ui.mostra_dadi(facce, func(): pass, verso)
 	ip.togli_dadi_3d(nodi)
 	if facce.size() == 1 and facce[0].get("v", false):
 		rete.suono("verde")

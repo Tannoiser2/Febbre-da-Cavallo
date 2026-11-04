@@ -351,6 +351,7 @@ func invia_tutti_i_segreti() -> void:
 			invia_segreto(g["uid"])
 
 func _process(delta: float) -> void:
+	ip.aree_libere = ui.aree_libere() if not ui.sala.visible else []
 	if auto and not _in_gioco and m.fase == "attesa" and _salvata == "" and m.giocatori.size() >= int(params.get("parti", "3")):
 		_gioca()
 	_t_invio -= delta
