@@ -88,8 +88,15 @@ function cronista() {
 
 function talloncini(vincitore = -1) {
   if (!mio || mio.pila < 0) return '';
-  const t = mio.talloncini.map((x) => `<div class="tal ${x.c === vincitore ? 'vince' : ''}" style="background:${esc(x.col)}">
-    <b>${x.q}</b>${esc(x.nome)}</div>`).join('');
+  // raggruppati per cavallo: con pochi giocatori le pile sono grandi
+  const gruppi = {};
+  for (const x of mio.talloncini) {
+    if (!gruppi[x.c]) gruppi[x.c] = { c: x.c, nome: x.nome, col: x.col, q: [] };
+    gruppi[x.c].q.push(x.q);
+  }
+  const ord = Object.values(gruppi).sort((a, b) => b.q.reduce((s, v) => s + v, 0) - a.q.reduce((s, v) => s + v, 0));
+  const t = ord.map((g) => `<div class="tal ${g.c === vincitore ? 'vince' : ''}" style="background:${esc(g.col)}">
+    <b>${g.q.reduce((s, v) => s + v, 0)}</b>${esc(g.nome)}${g.q.length > 1 ? `<small>${g.q.join(' + ')}</small>` : ''}</div>`).join('');
   const coperti = !mostraTal && vincitore < 0;
   return `<div class="box"><h2>I tuoi talloncini (pila ${esc(mio.lettera)})</h2>
     <div class="talloncini ${coperti ? 'coperti' : ''}">${t}</div>

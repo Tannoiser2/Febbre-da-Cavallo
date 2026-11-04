@@ -46,7 +46,7 @@ const TOKEN := {
 }
 
 const VALORI_TALLONCINI := [1, 2, 3, 4, 5]
-const LETTERE_PILE := ["A", "B", "C", "D", "E", "F", "G", "H"]
+const LETTERE_PILE := ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
 
 static func colore(i: int) -> Color:
 	return Color(CAVALLI[i]["colore"])

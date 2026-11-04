@@ -45,7 +45,7 @@ func _init() -> void:
 		var io := IOBot.new()
 		io.motore = m
 		m.io = io
-		var ng := 2 + i % 7
+		var ng := 2 + i % 9
 		for g in ng:
 			m.aggiungi_giocatore("g%d" % g, "Gioc%d" % g, true)
 		m.cambiato.connect(func(): _controlla(m))
@@ -58,7 +58,18 @@ func _init() -> void:
 		var tot_q := 0
 		for r in m.risultati:
 			tot_q += r["quote"]
-		assert(tot_q <= 15)
+		if tot_q != 15:
+			_err += 1
+			print("quote vincenti %d invece di 15" % tot_q)
+		var somme := []
+		for pl in m.pile:
+			var t := 0
+			for x in pl:
+				t += x["q"]
+			somme.append(t)
+		if somme.max() - somme.min() > 1:
+			_err += 1
+			print("pile sbilanciate ", somme)
 	for r in [2, 4, 6]:
 		var l := turni.filter(func(x): return x[0] == r).map(func(x): return x[1])
 		if l.size():

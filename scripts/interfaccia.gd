@@ -364,8 +364,10 @@ func mostra_dadi(facce: Array, _suono: Callable) -> void:
 	_dadi_ws = ws
 	await get_tree().process_frame
 	dadi_box.reset_size()
+	var finale := minf(1.0, (size.x - 560.0) / maxf(1.0, dadi_box.size.x))
 	var alto_x := size.x / 2.0 - dadi_box.size.x / 2.0 - 120
-	var grande := 2.0
+	var grande := minf(2.0, (size.x - 120.0) / maxf(1.0, dadi_box.size.x))
+	dadi_box.set_meta("scala", finale)
 	dadi_box.pivot_offset = Vector2(dadi_box.size.x / 2.0, 75)
 	dadi_box.position = Vector2(size.x / 2.0 - dadi_box.size.x / 2.0, size.y / 2.0 - 75)
 	dadi_box.scale = Vector2(0.2, 0.2)
@@ -374,7 +376,7 @@ func mostra_dadi(facce: Array, _suono: Callable) -> void:
 	tw.tween_property(dadi_box, "scale", Vector2(grande, grande), 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.parallel().tween_property(dadi_box, "modulate", Color.WHITE, 0.2)
 	tw.tween_interval(0.9 / velocita)
-	tw.tween_property(dadi_box, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_CUBIC)
+	tw.tween_property(dadi_box, "scale", Vector2(finale, finale), 0.4).set_trans(Tween.TRANS_CUBIC)
 	tw.parallel().tween_property(dadi_box, "position", Vector2(alto_x, 190), 0.4).set_trans(Tween.TRANS_CUBIC)
 	await tw.finished
 
@@ -405,6 +407,9 @@ func evidenzia_preso(nome: String) -> void:
 func _centra(box: Control) -> void:
 	await get_tree().process_frame
 	box.reset_size()
+	var sc := minf(1.0, (size.x - 560.0) / maxf(1.0, box.size.x))
+	box.pivot_offset = Vector2(box.size.x / 2.0, 0)
+	box.scale = Vector2(sc, sc)
 	box.position.x = size.x / 2.0 - box.size.x / 2.0 - 120
 
 func togli_dadi() -> void:
@@ -515,7 +520,7 @@ func _crea_sala() -> void:
 	dx.add_theme_constant_override("separation", 12)
 	dx.custom_minimum_size = Vector2(640, 0)
 	h.add_child(dx)
-	sala_conteggio = etichetta("Giocatori: 0 di 8", f_titolo, 44, ROSSO)
+	sala_conteggio = etichetta("Giocatori: 0 di 10", f_titolo, 44, ROSSO)
 	dx.add_child(sala_conteggio)
 	sala_giocatori = GridContainer.new()
 	sala_giocatori.columns = 2
@@ -686,7 +691,7 @@ func aggiorna_sala(m: Motore) -> void:
 		p.custom_minimum_size = Vector2(300, 0)
 		p.add_child(etichetta(g["nome"] + (" (finto)" if g["bot"] else ""), f_testo, 32, SCURO))
 		sala_giocatori.add_child(p)
-	sala_conteggio.text = "Giocatori: %d di 8" % m.giocatori.size()
+	sala_conteggio.text = "Giocatori: %d di %d" % [m.giocatori.size(), Motore.MAX_GIOCATORI]
 	sala_parti.disabled = m.giocatori.size() < 2
 
 # ------------------------------------------------------------------ pile
@@ -713,7 +718,8 @@ func _crea_pile() -> void:
 	g.add_theme_constant_override("h_separation", 18)
 	g.add_theme_constant_override("v_separation", 18)
 	v.add_child(g)
-	for i in 8:
+	g.columns = 5
+	for i in 10:
 		var p := PanelContainer.new()
 		p.custom_minimum_size = Vector2(230, 150)
 		p.add_theme_stylebox_override("panel", stile(Color("#f7e2b0"), Color("#8a5a2a"), 16, 4))
@@ -731,7 +737,9 @@ func _crea_pile() -> void:
 
 func mostra_pile(m: Motore) -> void:
 	pile_box.visible = true
-	for i in 8:
+	for i in 10:
+		pile_celle[i]["p"].visible = i < m.pile.size()
+	for i in m.pile.size():
 		pile_celle[i]["chi"].text = "libera"
 		pile_celle[i]["chi"].add_theme_color_override("font_color", Color("#8a7a6a"))
 		pile_celle[i]["p"].add_theme_stylebox_override("panel", stile(Color("#f7e2b0"), Color("#8a5a2a"), 16, 4))

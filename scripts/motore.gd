@@ -7,6 +7,8 @@ extends RefCounted
 
 signal cambiato   # lo stato pubblico è cambiato (da mandare ai telefoni)
 
+const MAX_GIOCATORI := 10
+
 var pista: Pista
 var v = null
 var io = null
@@ -27,7 +29,7 @@ var giocatori := []         # {uid, nome, bot, pila, turni, saldo, vinto}
 var cavalli := []           # {id, cella, attivo, zoppo, cella_zoppo}
 var token := {}             # cella -> tipo
 var sacchetto := []
-var pile := []              # 8 pile di 5 talloncini {c: cavallo, q: quota}
+var pile := []              # una pila per giocatore: tutti i 40 talloncini {c: cavallo, q: quota}
 var vincitore := -1
 var n_corsa := 0
 var n_turno := 0
@@ -64,7 +66,7 @@ func aggiungi_giocatore(uid: String, nome: String, bot := false) -> bool:
 	if not trova(uid).is_empty():
 		trova(uid)["nome"] = nome
 		return false
-	if giocatori.size() >= 8 or fase != "attesa":
+	if giocatori.size() >= MAX_GIOCATORI or fase != "attesa":
 		return false
 	giocatori.append({"uid": uid, "nome": nome, "bot": bot, "pila": -1, "turni": 0, "saldo": 0.0, "vinto": 0.0})
 	cambiato.emit()
@@ -100,15 +102,41 @@ func prepara_corsa() -> void:
 	for g in giocatori:
 		g["pila"] = -1
 		g["turni"] = 0
-	# 8 pile casuali, ognuna con un talloncino da 1, 2, 3, 4 e 5
-	pile = []
-	for p in 8:
-		pile.append([])
-	for q in Dati.VALORI_TALLONCINI:
-		var perm := range(8)
-		perm.shuffle()
-		for p in 8:
-			pile[p].append({"c": perm[p], "q": q})
+	pile = distribuisci_talloncini(max(2, giocatori.size()))
+
+## Tutti i 40 talloncini (8 cavalli x quote da 1 a 5) divisi in tante pile quanti sono i giocatori,
+## con lo stesso valore totale in ogni pila (più o meno uno). Così su ogni cavallo ci sono sempre 15 quote
+## in mano ai giocatori e chi vince si divide tutto il montepremi, qualunque sia il cavallo vincente.
+func distribuisci_talloncini(n: int) -> Array:
+	var tal := []
+	for c in 8:
+		for q in Dati.VALORI_TALLONCINI:
+			tal.append({"c": c, "q": q})
+	tal.shuffle()
+	tal.sort_custom(func(a, b): return a["q"] > b["q"])
+	var ps := []
+	var somme := []
+	for p in n:
+		ps.append([])
+		somme.append(0)
+	for t in tal:
+		var migliore := -1
+		var punti := 1.0e9
+		for p in n:
+			var ha := false
+			for x in ps[p]:
+				if x["c"] == t["c"]:
+					ha = true
+			var v: float = somme[p] * 100.0 + (50.0 if ha else 0.0) + ps[p].size() + randf() * 0.5
+			if v < punti:
+				punti = v
+				migliore = p
+		ps[migliore].append(t)
+		somme[migliore] += t["q"]
+	for p in ps:
+		p.sort_custom(func(a, b): return a["q"] > b["q"])
+	ps.shuffle()
+	return ps
 
 func quanti_token(t: String) -> int:
 	return int(cfg["sacchetto"].get(t, Dati.TOKEN[t]["n"]))
@@ -148,10 +176,10 @@ func _scegli_pile() -> void:
 	var prese := {}
 	while liberi.size():
 		var op := []
-		for p in 8:
+		for p in pile.size():
 			op.append({"k": p, "t": "Pila " + Dati.LETTERE_PILE[p], "ok": not prese.has(p)})
 		var r: Dictionary = await _chiedi(liberi, "pila", "Scegli la tua pila di talloncini", op,
-			{"sotto": "Costa %s. Dentro ci sono 5 talloncini: guardali di nascosto!" % euro(cfg["posta"]), "scopo": "pila"})
+			{"sotto": "Costa %s. Dentro ci sono %d talloncini: guardali di nascosto!" % [euro(cfg["posta"]), pile[0].size()], "scopo": "pila"})
 		var g := trova(r["uid"])
 		g["pila"] = int(r["k"])
 		prese[int(r["k"])] = true

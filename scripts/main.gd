@@ -72,7 +72,7 @@ func _ready() -> void:
 
 func _aggiungi_bot() -> void:
 	_n_bot += 1
-	var nomi := ["Mandrake", "Pomata", "Felice", "Gabriella", "Zia Rosa", "Nonno Pino", "Cugino Ugo", "Marisa"]
+	var nomi := ["Mandrake", "Pomata", "Felice", "Gabriella", "Zia Rosa", "Nonno Pino", "Cugino Ugo", "Marisa", "Zio Gigi", "Nonna Lina"]
 	m.aggiungi_giocatore("bot%d" % _n_bot, nomi[(_n_bot - 1) % nomi.size()], true)
 	ui.aggiorna_sala(m)
 

@@ -15,12 +15,14 @@ I telefoni aprono `telefono.html` dal QR code, oppure scrivono il codice di 4 le
 
 ## Come si gioca
 
-1. **Sala d'attesa** - la TV mostra il QR code e il codice. Da 2 a 8 giocatori. Le regole della casa:
+1. **Sala d'attesa** - la TV mostra il QR code e il codice. Da 2 a 10 giocatori. Le regole della casa:
    lunghezza della pista (2, 4 o 6 rettilinei con le 4 curve), posta a testa (15 euro come nel regolamento,
    oppure 3, 1,50 o per gioco), quando scattano i token sulla pista, corsa al dado sì/no.
-2. **Le pile** - i 40 talloncini (8 cavalli x quote da 1 a 5) sono mescolati in 8 pile da 5. Ognuno sceglie
-   una pila dal telefono e la guarda di nascosto (*Guarda di nascosto* / *Nascondi*). Il montepremi è
-   diviso in 15 quote.
+2. **Le pile** - da 2 a 10 giocatori. I 40 talloncini (8 cavalli x quote da 1 a 5) vengono divisi **tutti** in
+   tante pile quanti sono i giocatori, con lo stesso valore in ogni pila (con 10 giocatori 4 talloncini e 12 quote a
+   testa, con 4 giocatori 10 talloncini e 30 quote...). Ognuno sceglie una pila dal telefono e la guarda di
+   nascosto. Il montepremi è diviso in 15 quote: su ogni cavallo ci sono 15 quote in mano ai giocatori, quindi chi
+   vince si divide sempre tutto il montepremi.
 3. **La corsa** - a ogni turno **la sorte estrae chi gioca** (non si va in senso orario), ma una sola volta per
    giro: chi ha già giocato aspetta che abbiano giocato tutti, poi si ricomincia. Il giocatore tira il dado dal
    telefono, sceglie un cavallo **Attivo** (testa alta) e, con le facce *+N -N*, se usare +N o -N; poi la casella
