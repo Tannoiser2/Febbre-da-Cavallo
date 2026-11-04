@@ -52,6 +52,13 @@ var finale: Control
 var _pose_tween: Tween
 var titolo_img: TextureRect
 var velocita := 1.0
+var giro_box: PanelContainer        # in basso a destra: i ritratti dei giocatori, chi ha già giocato nel giro
+var giro_flow: HFlowContainer
+var giro_carte := {}                # uid -> {p, ritratto, nome, timbro}
+var _giro_chiave := ""
+var _tex_ritratti := {}
+var _in_roulette := false
+var _accesi_fissi := []
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -72,6 +79,7 @@ func _ready() -> void:
 	_crea_banner()
 	_crea_avatar()
 	_crea_comandi()
+	_crea_giro()
 	_crea_sala()
 	_crea_pile()
 	move_child(avatar, -1)
@@ -282,6 +290,132 @@ func sotto_banner(sotto: String) -> void:
 	await get_tree().process_frame
 	banner.reset_size()
 	banner.position.x = size.x / 2.0 - banner.size.x / 2.0 - 120
+
+func tex_ritratto(id: String) -> Texture2D:
+	if id == "":
+		return null
+	if not _tex_ritratti.has(id):
+		_tex_ritratti[id] = load("res://assets/ritratti/%s.webp" % id)
+	return _tex_ritratti[id]
+
+# ------------------------------------------------------------------ ritratti del giro (in basso a destra)
+func _crea_giro() -> void:
+	giro_box = PanelContainer.new()
+	giro_box.add_theme_stylebox_override("panel", stile(Color(1.0, 0.96, 0.84, 0.92), ROSSO, 18, 4))
+	giro_box.anchor_left = 1.0
+	giro_box.anchor_right = 1.0
+	giro_box.anchor_top = 1.0
+	giro_box.anchor_bottom = 1.0
+	giro_box.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	giro_box.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	giro_box.offset_right = -16
+	giro_box.offset_bottom = -16
+	giro_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	giro_box.visible = false
+	add_child(giro_box)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 4)
+	giro_box.add_child(v)
+	var t := etichetta("CHI GIOCA IN QUESTO GIRO", f_titolo, 26, ROSSO)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	giro_flow = HFlowContainer.new()
+	giro_flow.custom_minimum_size = Vector2(560, 0)
+	giro_flow.add_theme_constant_override("h_separation", 8)
+	giro_flow.add_theme_constant_override("v_separation", 8)
+	v.add_child(giro_flow)
+
+func _stile_carta(acceso: bool) -> StyleBoxFlat:
+	var s := stile(Color("#fff8e6"), Color("#ffd23f") if acceso else Color("#8a5a2a"), 10, 7 if acceso else 3, acceso)
+	s.content_margin_left = 3
+	s.content_margin_right = 3
+	s.content_margin_top = 3
+	s.content_margin_bottom = 3
+	return s
+
+func aggiorna_giro(m: Motore) -> void:
+	giro_box.visible = m.fase == "corsa" or m.fase == "pile"
+	var chiave := ""
+	for g in m.giocatori:
+		chiave += g["uid"] + g.get("ritratto", "") + "|"
+	if chiave != _giro_chiave:
+		_giro_chiave = chiave
+		for c in giro_flow.get_children():
+			c.queue_free()
+		giro_carte = {}
+		for g in m.giocatori:
+			var p := PanelContainer.new()
+			p.add_theme_stylebox_override("panel", _stile_carta(false))
+			var vv := VBoxContainer.new()
+			vv.add_theme_constant_override("separation", 0)
+			p.add_child(vv)
+			var r := TextureRect.new()
+			r.texture = tex_ritratto(g.get("ritratto", ""))
+			r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			r.custom_minimum_size = Vector2(96, 96)
+			vv.add_child(r)
+			var n := etichetta(str(g.get("base", g["nome"])), f_testo, 20, SCURO)
+			n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			n.custom_minimum_size = Vector2(96, 0)
+			n.clip_text = true
+			vv.add_child(n)
+			var timbro := etichetta("GIOCATO", f_titolo, 26, Color("#c8202b"), 6, Color.WHITE)
+			timbro.rotation = -0.35
+			timbro.position = Vector2(8, 40)
+			timbro.visible = false
+			p.add_child(timbro)
+			timbro.set_anchors_preset(Control.PRESET_TOP_LEFT)
+			giro_flow.add_child(p)
+			giro_carte[g["uid"]] = {"p": p, "r": r, "timbro": timbro}
+	for g in m.giocatori:
+		var c: Dictionary = giro_carte.get(g["uid"], {})
+		if c.is_empty():
+			continue
+		var gioc: bool = m.giro.has(g["uid"]) and g["uid"] != m.di_turno
+		c["r"].modulate = Color(0.45, 0.45, 0.45) if gioc else Color.WHITE
+		c["timbro"].visible = gioc
+		if not _in_roulette:
+			if not m.in_corsa_dado:
+				_accesi_fissi = []
+			var acceso: bool = g["uid"] == m.di_turno if m.di_turno != "" else _accesi_fissi.has(g["uid"])
+			c["p"].add_theme_stylebox_override("panel", _stile_carta(acceso))
+
+func _accendi(uid: String) -> void:
+	for u in giro_carte:
+		giro_carte[u]["p"].add_theme_stylebox_override("panel", _stile_carta(u == uid))
+
+## Estrazione del giocatore: la luce corre sui ritratti di chi non ha ancora giocato e si ferma sullo scelto
+func roulette_ritratti(m: Motore, scelto: String, suono: Callable) -> void:
+	giro_box.visible = true
+	var cand := []
+	for g in m.giocatori:
+		if not m.giro.has(g["uid"]) or g["uid"] == scelto:
+			cand.append(g["uid"])
+	_in_roulette = true
+	_accesi_fissi = []
+	if cand.size() > 1:
+		var i0 := randi() % cand.size()
+		var fine := cand.find(scelto)
+		var passi := 14 + ((fine - i0 - 14) % cand.size() + cand.size()) % cand.size()
+		for k in passi + 1:
+			_accendi(cand[(i0 + k) % cand.size()])
+			suono.call()
+			await get_tree().create_timer((0.05 + 0.012 * k * k / 4.0) / velocita).timeout
+	_accendi(scelto)
+	_in_roulette = false
+	var c: Dictionary = giro_carte.get(scelto, {})
+	if not c.is_empty():
+		var p: Control = c["p"]
+		p.pivot_offset = p.size / 2.0
+		var tw := create_tween()
+		tw.tween_property(p, "scale", Vector2(1.25, 1.25), 0.15)
+		tw.tween_property(p, "scale", Vector2.ONE, 0.25)
+	await mostra_banner("TOCCA A " + m.nome_g(scelto).to_upper())
+
+func accendi_molti(uids: Array) -> void:
+	_accesi_fissi = uids.duplicate()
+	for u in giro_carte:
+		giro_carte[u]["p"].add_theme_stylebox_override("panel", _stile_carta(uids.has(u)))
 
 ## Estrazione a sorte del giocatore: i nomi girano e rallentano
 func roulette(nomi: Array, scelto: String, suono: Callable) -> void:
@@ -689,7 +823,17 @@ func aggiorna_sala(m: Motore) -> void:
 		var p := PanelContainer.new()
 		p.add_theme_stylebox_override("panel", stile(Color("#fff"), Color("#d9c39a"), 14, 3, false))
 		p.custom_minimum_size = Vector2(300, 0)
-		p.add_child(etichetta(g["nome"] + (" (finto)" if g["bot"] else ""), f_testo, 32, SCURO))
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 10)
+		var t := TextureRect.new()
+		t.texture = tex_ritratto(g.get("ritratto", ""))
+		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		t.custom_minimum_size = Vector2(46, 46)
+		h.add_child(t)
+		var l := etichetta(g["nome"] + (" (finto)" if g["bot"] else ""), f_testo, 26, SCURO)
+		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(l)
+		p.add_child(h)
 		sala_giocatori.add_child(p)
 	sala_conteggio.text = "Giocatori: %d di %d" % [m.giocatori.size(), Motore.MAX_GIOCATORI]
 	sala_parti.disabled = m.giocatori.size() < 2
@@ -807,7 +951,15 @@ func mostra_risultati(m: Motore, ris: Array, rivela_fino: int) -> void:
 		var r: Dictionary = ris[i]
 		var gg := m.trova(r["uid"])
 		var vis := i < rivela_fino
-		g.add_child(etichetta(r["nome"], f_testo, 34, SCURO))
+		var hn := HBoxContainer.new()
+		hn.add_theme_constant_override("separation", 8)
+		var tr := TextureRect.new()
+		tr.texture = tex_ritratto(gg.get("ritratto", ""))
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.custom_minimum_size = Vector2(42, 42)
+		hn.add_child(tr)
+		hn.add_child(etichetta(r["nome"], f_testo, 30, SCURO))
+		g.add_child(hn)
 		var tal := HBoxContainer.new()
 		tal.add_theme_constant_override("separation", 6)
 		if vis:

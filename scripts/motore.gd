@@ -36,6 +36,7 @@ var n_turno := 0
 var salta_prossimo := false
 var in_corsa_dado := false
 var corsa_per_tutti := false   # il "?" chiede la corsa al dado per tutti i giocatori, alla fine del turno
+var cella_interrogativo := -1  # dove sta il "?" che ha chiesto la corsa (torna nel sacchetto dopo la corsa)
 var giro := []              # chi ha già giocato in questo giro (si ricomincia quando hanno giocato tutti)
 var ultimo_uid := ""
 var di_turno := ""          # uid di chi sta giocando ora
@@ -62,13 +63,37 @@ func nome_g(uid: String) -> String:
 	var g := trova(uid)
 	return g.get("nome", "?")
 
-func aggiungi_giocatore(uid: String, nome: String, bot := false) -> bool:
-	if not trova(uid).is_empty():
-		trova(uid)["nome"] = nome
+## Un ritratto libero: quello chiesto se nessun altro l'ha preso, altrimenti il primo libero
+func ritratto_libero(chiesto: String, uid := "") -> String:
+	var presi := {}
+	for g in giocatori:
+		if g["uid"] != uid:
+			presi[g.get("ritratto", "")] = true
+	if chiesto != "" and Dati.nome_ritratto(chiesto) != "" and not presi.has(chiesto):
+		return chiesto
+	for r in Dati.RITRATTI:
+		if not presi.has(r["id"]):
+			return r["id"]
+	return ""
+
+func _nome_completo(base: String, ritratto: String) -> String:
+	var r := Dati.nome_ritratto(ritratto)
+	return base if r == "" or r == base else "%s (%s)" % [base, r]
+
+func aggiungi_giocatore(uid: String, nome: String, bot := false, ritratto := "") -> bool:
+	var g := trova(uid)
+	if not g.is_empty():
+		if fase == "attesa":
+			g["ritratto"] = ritratto_libero(ritratto if ritratto != "" else g.get("ritratto", ""), uid)
+		g["base"] = nome
+		g["nome"] = _nome_completo(nome, g.get("ritratto", ""))
+		cambiato.emit()
 		return false
 	if giocatori.size() >= MAX_GIOCATORI or fase != "attesa":
 		return false
-	giocatori.append({"uid": uid, "nome": nome, "bot": bot, "pila": -1, "turni": 0, "saldo": 0.0, "vinto": 0.0})
+	var rt := ritratto_libero(ritratto, uid)
+	giocatori.append({"uid": uid, "nome": _nome_completo(nome, rt), "base": nome, "ritratto": rt, "bot": bot,
+		"pila": -1, "turni": 0, "saldo": 0.0, "vinto": 0.0})
 	cambiato.emit()
 	return true
 
@@ -225,6 +250,15 @@ func gioca_turno() -> void:
 	while corsa_per_tutti and vincitore < 0:
 		corsa_per_tutti = false
 		await corsa_al_dado(true)
+		# risolta la corsa al dado, il "?" torna subito nel sacchetto
+		if cella_interrogativo >= 0 and token.get(cella_interrogativo, "") == "sorpresa":
+			token.erase(cella_interrogativo)
+			sacchetto.append("sorpresa")
+			sacchetto.shuffle()
+			await v.token_via([cella_interrogativo])
+			await v.dici("Il punto interrogativo torna nel sacchetto.", "parla")
+		cella_interrogativo = -1
+		cambiato.emit()
 	di_turno = ""
 	dado_attuale = []
 	cambiato.emit()
@@ -610,6 +644,7 @@ func applica(uid: String, cid: int, tipo: String, origine: int, prof: int, cella
 			await nuovo_turno_cavalli()
 			giro = []
 			corsa_per_tutti = true
+			cella_interrogativo = cella_token
 			cambiato.emit()
 			await v.aggiorna()
 			await v.dici("Nuovo giro! Tutti i cavalli rialzano la testa e alla fine del turno corsa al dado per tutti!", "festeggia")
@@ -793,7 +828,8 @@ func _log(t: String) -> void:
 func stato_pubblico() -> Dictionary:
 	var gs := []
 	for g in giocatori:
-		gs.append({"uid": g["uid"], "nome": g["nome"], "pila": g["pila"], "saldo": g["saldo"], "vinto": g["vinto"], "turni": g["turni"]})
+		gs.append({"uid": g["uid"], "nome": g["nome"], "base": g.get("base", g["nome"]), "ritratto": g.get("ritratto", ""),
+			"pila": g["pila"], "saldo": g["saldo"], "vinto": g["vinto"], "turni": g["turni"], "giocato": giro.has(g["uid"])})
 	var cs := []
 	for c in cavalli:
 		cs.append({"id": c["id"], "nome": Dati.nome(c["id"]), "col": Dati.CAVALLI[c["id"]]["colore"], "attivo": c["attivo"],

@@ -47,8 +47,8 @@ window.FR = {
       const url = base() + 'telefono.html?s=' + c + (q.get('rete') === 'locale' ? '&rete=locale' : '');
       coda.push({ e: 'stanza', codice: c, url });
       stacca.push(rete.onFigli(`${RADICE}/${c}/giocatori`, {
-        aggiunto: (k, v) => coda.push({ e: 'entra', uid: k, nome: v?.nome || '' }),
-        cambiato: (k, v) => coda.push({ e: 'entra', uid: k, nome: v?.nome || '' }),
+        aggiunto: (k, v) => coda.push({ e: 'entra', uid: k, nome: v?.nome || '', ritratto: v?.ritratto || '' }),
+        cambiato: (k, v) => coda.push({ e: 'entra', uid: k, nome: v?.nome || '', ritratto: v?.ritratto || '' }),
         tolto: (k) => coda.push({ e: 'esce', uid: k }),
       }));
       stacca.push(rete.onFigli(`${RADICE}/${c}/azioni`, {

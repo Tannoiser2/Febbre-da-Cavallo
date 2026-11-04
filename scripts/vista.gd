@@ -69,16 +69,15 @@ func pila_scelta(uid: String, p: int) -> void:
 
 func estrazione(uid: String) -> void:
 	ui.togli_dadi()
-	var nomi := []
-	for g in m.giocatori:
-		nomi.append(g["nome"])
-	await ui.roulette(nomi, m.nome_g(uid), func(): rete.suono("tick"))
+	ui.mostra_banner("")
+	await ui.roulette_ritratti(m, uid, func(): rete.suono("tick"))
 	rete.suono("ding")
 
 func estrazione_multipla(uids: Array) -> void:
 	var nomi := []
 	for u in uids:
 		nomi.append(m.nome_g(u))
+	ui.accendi_molti(uids)
 	await ui.mostra_banner("CORSA AL DADO!", " - ".join(nomi))
 	rete.suono("ding")
 	await _attendi(0.6)

@@ -13,6 +13,13 @@ h1, h2, h3, .titolo { font-family: 'Bangers', sans-serif; font-weight: normal; l
 .testata { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .testata img { width: 62%; max-width: 300px; filter: drop-shadow(0 4px 4px rgba(0,0,0,.4)); }
 .testata .chi { margin-left: auto; text-align: right; color: var(--crema); font-size: 17px; line-height: 1.1; }
+.mio-ritratto { width: 64px !important; height: 64px; border-radius: 10px; border: 3px solid var(--giallo); flex: none; }
+.ritratti { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 6px 0 10px; }
+.ritratto { padding: 3px; margin: 0; background: #fff; border: 3px solid #d9c39a; box-shadow: none; border-radius: 10px; color: var(--scuro);
+  font-family: 'Barlow'; font-size: 12px; line-height: 1.05; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ritratto img { width: 100%; aspect-ratio: 1; border-radius: 6px; object-fit: cover; }
+.ritratto.scelto { border-color: var(--rosso); background: #ffe36b; transform: scale(1.06); }
+.ritratto:disabled { opacity: .3; }
 .testata .chi b { font-family: 'Bangers'; font-weight: normal; font-size: 24px; color: var(--giallo); display: block; }
 .box { background: var(--crema); border: 4px solid var(--rosso); border-radius: 18px; padding: 12px 14px; margin: 10px 0;
   box-shadow: 0 6px 14px rgba(0,0,0,.35); }

@@ -6,7 +6,9 @@ Versione digitale del gioco di corse e scommesse ispirato al film, pensata per l
   come i pezzi stampati, gli otto cavalli animati con il nome sopra (King, Soldatino, Dartagnan, Apocalisse,
   Can Can, Piripicchio, 'O Sole Mio, Uragano), i token, la tribuna e il **cronista**
   (l'avatar di Stefano) che commenta con il fumetto e con la voce;
-- **ogni giocatore** inquadra il QR code con il telefono, scrive il nome ed è dentro: sceglie la pila di
+- **ogni giocatore** inquadra il QR code con il telefono, scrive il nome, sceglie il suo ritratto tra i 10
+  protagonisti del film (Mandrake, Pomata, Felice, Gabriella, Giuliana, Mafalda, l'Avvocato De Marchis, il Giudice,
+  Manzotin, Ventresca; quelli già presi non si possono scegliere) ed è dentro come «Nome (Mandrake)»: sceglie la pila di
   talloncini, tira il dado e sceglie cavallo, direzione e casella. Sul telefono si possono toccare **solo
   le scelte valide**.
 
@@ -24,7 +26,9 @@ I telefoni aprono `telefono.html` dal QR code, oppure scrivono il codice di 4 le
    nascosto. Il montepremi è diviso in 15 quote: su ogni cavallo ci sono 15 quote in mano ai giocatori, quindi chi
    vince si divide sempre tutto il montepremi.
 3. **La corsa** - a ogni turno **la sorte estrae chi gioca** (non si va in senso orario), ma una sola volta per
-   giro: chi ha già giocato aspetta che abbiano giocato tutti, poi si ricomincia. Il giocatore tira il dado dal
+   giro: chi ha già giocato aspetta che abbiano giocato tutti, poi si ricomincia. In basso a destra sulla TV ci sono i
+   ritratti dei giocatori: la luce corre su quelli che non hanno ancora giocato e si ferma sullo scelto; chi ha già
+   giocato nel giro è grigio, con il timbro GIOCATO. Il giocatore tira il dado dal
    telefono, sceglie un cavallo **Attivo** (testa alta) e, con le facce *+N -N*, se usare +N o -N; poi la casella
    d'arrivo se ce n'è più d'una (le caselle possibili compaiono numerate sulla pista, sulla TV). Il cavallo mosso abbassa la testa (Disattivo); quando tutti
    sono Disattivi si rialzano tutti.
@@ -57,7 +61,7 @@ I telefoni aprono `telefono.html` dal QR code, oppure scrivono il codice di 4 le
 | Salta il turno | 1 | il prossimo giocatore estratto salta il turno |
 | Azzoppato | 1 | il cavallo esce dalla pista per tutto il turno in corso; al turno dopo (quando i cavalli si rialzano) rientra, ma Disattivo |
 | Spazzata (!) | 1 | tornano nel sacchetto lei e tutti i token dietro l'ultimo cavallo |
-| Nuovo giro (?) | 2 | tutti i cavalli tornano Attivi, si apre un nuovo giro e a fine turno c'è la corsa al dado per tutti i giocatori |
+| Nuovo giro (?) | 2 | tutti i cavalli tornano Attivi, si apre un nuovo giro e a fine turno c'è la corsa al dado per tutti i giocatori; dopo la corsa il ? torna subito nel sacchetto |
 
 I token restano sulla pista: tornano nel sacchetto solo quelli dietro l'ultimo cavallo quando esce la Spazzata (!),
 e la Volata a tre e l'Azzoppato quando un cavallo ci capita sopra.

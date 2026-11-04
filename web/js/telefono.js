@@ -23,8 +23,10 @@ function euro(x) {
   return c % 100 === 0 ? `${c / 100} euro` : `${Math.floor(c / 100)},${String(c % 100).padStart(2, '0')} euro`;
 }
 function testata() {
+  const io = S?.giocatori?.find((g) => g.uid === uid);
+  const r = io?.ritratto ? `<img class="mio-ritratto" src="img/ritratti/${esc(io.ritratto)}.webp" alt="">` : '';
   return `<div class="testata"><img src="img/titolo.webp" alt="Febbre da Cavallo">
-    <div class="chi">${nome ? `<b>${esc(nome)}</b>` : ''}${codice ? 'stanza ' + esc(codice) : ''}</div></div>`;
+    <div class="chi">${io ? `<b>${esc(io.nome)}</b>` : (nome ? `<b>${esc(nome)}</b>` : '')}${codice ? 'stanza ' + esc(codice) : ''}</div>${r}</div>`;
 }
 
 // ------------------------------------------------------------------ ingresso
@@ -44,19 +46,43 @@ function schermataCodice(msg = '') {
   i.onkeydown = (e) => { if (e.key === 'Enter') vai(); };
 }
 
+const RITRATTI = [['mandrake', 'Mandrake'], ['pomata', 'Pomata'], ['felice', 'Felice'], ['gabriella', 'Gabriella'],
+  ['giuliana', 'Giuliana'], ['mafalda', 'Mafalda'], ['avvocato', 'Avvocato De Marchis'], ['giudice', 'Giudice'],
+  ['manzotin', 'Manzotin'], ['ventresca', 'Ventresca']];
+let ritratto = localStorage.getItem('fdc_ritratto') || '';
+let presiRitratti = {};
+
 function schermataNome() {
   app.innerHTML = `${testata()}<div class="box"><h2>Come ti chiami?</h2>
     <p>Il nome comparirà sulla TV.</p>
     <input id="nome" maxlength="14" placeholder="Il tuo nome" value="${esc(nome)}" autocomplete="off">
+    <h2>Chi sei nel film?</h2><div class="ritratti" id="ritratti"></div>
     <button class="verde grande" id="entra">ENTRA</button></div>`;
   const i = app.querySelector('#nome');
+  const griglia = app.querySelector('#ritratti');
+  const disegnaRitratti = () => {
+    if (!ritratto || presiRitratti[ritratto]) ritratto = (RITRATTI.find(([id]) => !presiRitratti[id]) || [''])[0];
+    griglia.innerHTML = RITRATTI.map(([id, n]) => `<button class="ritratto ${id === ritratto ? 'scelto' : ''}" data-r="${id}" ${presiRitratti[id] ? 'disabled' : ''}>
+      <img src="img/ritratti/${id}.webp" alt=""><span>${esc(n)}</span></button>`).join('');
+    griglia.querySelectorAll('[data-r]').forEach((b) => { b.onclick = () => { ritratto = b.dataset.r; disegnaRitratti(); }; });
+  };
+  disegnaRitratti();
+  const stacca = rete.on(`${RADICE}/${codice}/stato`, (v) => {
+    let st = null;
+    try { st = v ? JSON.parse(v) : null; } catch (e) { st = null; }
+    presiRitratti = {};
+    for (const g of st?.giocatori || []) if (g.uid !== uid && g.ritratto) presiRitratti[g.ritratto] = true;
+    disegnaRitratti();
+  });
   const entra = async () => {
     const n = i.value.trim().slice(0, 14);
     if (!n) { i.focus(); return; }
     sbloccaAudio();
     nome = n;
     localStorage.setItem('fdc_nome', n);
-    await rete.set(`${RADICE}/${codice}/giocatori/${uid}`, { nome: n, t: Date.now() });
+    localStorage.setItem('fdc_ritratto', ritratto);
+    try { stacca?.(); } catch (e) { /* ok */ }
+    await rete.set(`${RADICE}/${codice}/giocatori/${uid}`, { nome: n, ritratto, t: Date.now() });
     localStorage.setItem('fdc_stanza_' + codice, '1');
     ascolta();
   };

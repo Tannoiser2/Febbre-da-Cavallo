@@ -72,9 +72,10 @@ func _ready() -> void:
 
 func _aggiungi_bot() -> void:
 	_n_bot += 1
-	var nomi := ["Mandrake", "Pomata", "Felice", "Gabriella", "Zia Rosa", "Nonno Pino", "Cugino Ugo", "Marisa", "Zio Gigi", "Nonna Lina"]
+	var nomi := ["Zia Rosa", "Nonno Pino", "Cugino Ugo", "Marisa", "Zio Gigi", "Nonna Lina", "Chiara", "Marco", "Paola", "Luca"]
 	m.aggiungi_giocatore("bot%d" % _n_bot, nomi[(_n_bot - 1) % nomi.size()], true)
 	ui.aggiorna_sala(m)
+	ui.aggiorna_giro(m)
 
 # ------------------------------------------------------------------ eventi dalla pagina
 func _evento(e: Dictionary) -> void:
@@ -89,11 +90,12 @@ func _evento(e: Dictionary) -> void:
 			var nome: String = str(e.get("nome", "")).strip_edges().substr(0, 16)
 			if nome == "":
 				return
-			var nuovo := m.aggiungi_giocatore(uid, nome)
+			var nuovo := m.aggiungi_giocatore(uid, nome, false, str(e.get("ritratto", "")))
 			ui.aggiorna_sala(m)
+			ui.aggiorna_giro(m)
 			if nuovo:
 				rete.suono("ding")
-				vista.dici(Dati.frase("arriva", {"g": nome}), "saluta")
+				vista.dici(Dati.frase("arriva", {"g": m.nome_g(uid)}), "saluta")
 			invia_segreto(uid)
 			_sporco = true
 		"esce":
@@ -306,6 +308,7 @@ func _process(delta: float) -> void:
 			_salva_punto()
 		if m.fase != "attesa" and ui.sala.visible:
 			ui.mostra_sala(false)
+		ui.aggiorna_giro(m)
 		if m.fase == "corsa" and m.di_turno == "" and _domanda.is_empty() and m.n_turno > 0 and not m.in_corsa_dado:
 			ui.togli_dadi()
 			if ui.banner.visible and not ui.banner_titolo.text.begins_with("CORSA"):

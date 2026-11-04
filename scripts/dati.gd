@@ -13,6 +13,26 @@ const CAVALLI := [
 	{"nome": "Uragano", "colore": "#2b2b2b"},
 ]
 
+## I ritratti dei protagonisti: ogni giocatore ne sceglie uno (diverso dagli altri) quando entra
+const RITRATTI := [
+	{"id": "mandrake", "nome": "Mandrake"},
+	{"id": "pomata", "nome": "Pomata"},
+	{"id": "felice", "nome": "Felice"},
+	{"id": "gabriella", "nome": "Gabriella"},
+	{"id": "giuliana", "nome": "Giuliana"},
+	{"id": "mafalda", "nome": "Mafalda"},
+	{"id": "avvocato", "nome": "Avvocato De Marchis"},
+	{"id": "giudice", "nome": "Giudice"},
+	{"id": "manzotin", "nome": "Manzotin"},
+	{"id": "ventresca", "nome": "Ventresca"},
+]
+
+static func nome_ritratto(id: String) -> String:
+	for r in RITRATTI:
+		if r["id"] == id:
+			return r["nome"]
+	return ""
+
 ## Facce del dado movimento: n = caselle, v = pallino verde (si pesca un TOKEN),
 ## e = "+N -N" (il giocatore sceglie se andare avanti o indietro). Le altre facce vanno solo avanti.
 const DADO := [
