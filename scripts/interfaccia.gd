@@ -30,7 +30,7 @@ var righe_cavalli := []
 var lista_giocatori: VBoxContainer
 var montepremi: Label
 var pannello_destra: PanelContainer
-var comandi: HBoxContainer
+var comandi: VBoxContainer
 var bt_decidi: Button
 var bt_voce: Button
 var bt_musica: Button
@@ -168,7 +168,7 @@ func _crea_titolo() -> void:
 	add_child(titolo_img)
 
 func _crea_comandi() -> void:
-	comandi = HBoxContainer.new()
+	comandi = VBoxContainer.new()
 	comandi.position = Vector2(24, 136)
 	comandi.add_theme_constant_override("separation", 10)
 	add_child(comandi)
@@ -394,13 +394,15 @@ func aree_libere() -> Array:
 	var top := 236.0
 	var crono_w := 400.0
 	var crono_h := 640.0
+	# i tasti sono in colonna sotto il titolo: a sinistra la pista parte sotto di loro
+	var sotto_tasti := comandi.position.y + comandi.size.y + 12.0
 	if disposizione == "destra":
 		var dx := (giro_box.size.x + 32.0) if giro_box.visible else 360.0
 		return [Rect2(crono_w, top, vp.x - dx - crono_w, vp.y - top - 16.0),
-			Rect2(16.0, top, vp.x - dx - 16.0, vp.y - top - crono_h)]
+			Rect2(16.0, sotto_tasti, vp.x - dx - 16.0, vp.y - sotto_tasti - crono_h)]
 	var hb := (giro_box.size.y + 32.0) if giro_box.visible else 240.0
 	return [Rect2(crono_w, top, vp.x - crono_w - 16.0, vp.y - top - hb),
-		Rect2(16.0, top, vp.x - 32.0, vp.y - top - maxf(hb, crono_h))]
+		Rect2(16.0, sotto_tasti, vp.x - 32.0, vp.y - sotto_tasti - maxf(hb, crono_h))]
 
 ## Centro (sullo schermo) del ritratto di un giocatore, per farci volare il dado
 func centro_ritratto(uid: String) -> Vector2:
