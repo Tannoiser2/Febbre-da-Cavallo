@@ -100,6 +100,9 @@ func _ready() -> void:
 	add_child(finale)
 	move_child(avatar, -1)
 	move_child(fumetto, -1)
+	# i tasti in alto a sinistra stanno sempre sopra a tutto (anche sopra la sala d'attesa)
+	move_child(titolo_img, -1)
+	move_child(comandi, -1)
 
 func _adatta() -> void:
 	position = Vector2.ZERO
@@ -375,8 +378,8 @@ func imposta_disposizione(d: String, m: Motore) -> void:
 		giro_box.offset_right = 0
 		giro_box.offset_top = -16
 		giro_box.offset_bottom = -16
-		avatar.offset_top = -650
-		avatar.offset_bottom = -230
+		avatar.offset_top = -420
+		avatar.offset_bottom = 0
 	_giro_chiave = ""
 	aggiorna_giro(m)
 	call_deferred("_fissa_giro")
@@ -393,8 +396,10 @@ func _fissa_giro() -> void:
 		giro_box.offset_top = 128
 		giro_box.offset_bottom = 128 + ms.y
 	else:
-		giro_box.offset_left = -ms.x / 2.0
-		giro_box.offset_right = ms.x / 2.0
+		# in fila in basso, a destra del cronista
+		var cx := 360.0 + (get_viewport_rect().size.x - 360.0) / 2.0 - get_viewport_rect().size.x / 2.0
+		giro_box.offset_left = cx - ms.x / 2.0
+		giro_box.offset_right = cx + ms.x / 2.0
 		giro_box.offset_top = -16 - ms.y
 		giro_box.offset_bottom = -16
 
@@ -431,7 +436,7 @@ func aggiorna_giro(m: Motore) -> void:
 		else:
 			# tutti in fila in basso, centrati
 			giro_flow.columns = ng
-			lato = clampf((get_viewport_rect().size.x - 120.0) / ng - 18.0, 80.0, 140.0)
+			lato = clampf((get_viewport_rect().size.x - 460.0) / ng - 18.0, 80.0, 140.0)
 		for g in m.giocatori:
 			var p := PanelContainer.new()
 			p.add_theme_stylebox_override("panel", _stile_carta(false))
@@ -666,7 +671,7 @@ func _crea_avatar() -> void:
 	fumetto.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fumetto.visible = false
 	add_child(fumetto)
-	testo_fumetto = etichetta("", f_testo, 40, SCURO)
+	testo_fumetto = etichetta("", f_testo, 34, SCURO)
 	testo_fumetto.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	testo_fumetto.custom_minimum_size = Vector2(200, 0)
 	fumetto.add_child(testo_fumetto)
@@ -684,7 +689,8 @@ func parla(testo: String, posa: String) -> void:
 	avatar.texture = tx if tx else posa_tex("parla")
 	fumetto.visible = testo != "" and not sala.visible
 	testo_fumetto.text = testo
-	var larg := clampf(testo.length() * 18.0, 260.0, maxf(300.0, minf(900.0, get_viewport_rect().size.x - 760.0)))
+	# fumetto stretto sopra la testa del cronista: il testo va a capo e non copre la pista
+	var larg := clampf(testo.length() * 15.0, 220.0, 400.0)
 	testo_fumetto.custom_minimum_size = Vector2(larg, 0)
 	fumetto.size = Vector2.ZERO
 	_posiziona_fumetto()
@@ -699,8 +705,8 @@ func parla(testo: String, posa: String) -> void:
 func _posiziona_fumetto() -> void:
 	fumetto.reset_size()
 	var vp := get_viewport_rect().size
-	var fondo := vp.y - 150.0 if disposizione == "destra" else vp.y - 380.0
-	fumetto.position = Vector2(300, fondo - fumetto.size.y)
+	var testa := vp.y + avatar.offset_top + 30.0
+	fumetto.position = Vector2(16, testa - fumetto.size.y)
 
 func zitto() -> void:
 	fumetto.visible = false
@@ -722,6 +728,8 @@ func _crea_sala() -> void:
 	p.grow_vertical = Control.GROW_DIRECTION_BOTH
 	p.offset_left = 130
 	p.offset_right = 130
+	p.offset_top = 60
+	p.offset_bottom = 60
 	p.name = "Pannello"
 	sala.add_child(p)
 	var h := HBoxContainer.new()

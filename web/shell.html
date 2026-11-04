@@ -42,12 +42,16 @@ $GODOT_HEAD_INCLUDE
   <div id="stato"></div>
 </div>
 <script src="js/vendor/qrcode.js"></script>
-<script src="$GODOT_URL"></script>
+<div id="versione" style="position:fixed;right:8px;bottom:6px;color:#9fc79a;font-size:13px;z-index:11">versione __VERSIONE__</div>
+<script src="$GODOT_URL?v=__VERSIONE__"></script>
 <script type="module">
-import './js/ponte.js';
-import { sbloccaAudio, sbloccaVoce } from './js/suoni.js';
+import './js/ponte.js?v=__VERSIONE__';
+import { sbloccaAudio, sbloccaVoce } from './js/suoni.js?v=__VERSIONE__';
 
 const GODOT_CONFIG = $GODOT_CONFIG;
+// ogni pubblicazione ha il suo numero: il browser non riusa la versione vecchia del gioco
+const VERSIONE = '__VERSIONE__';
+GODOT_CONFIG.mainPack = (GODOT_CONFIG.mainPack || 'index.pck') + '?v=' + VERSIONE;
 const engine = new Engine(GODOT_CONFIG);
 const stato = document.getElementById('stato');
 const q = new URLSearchParams(location.search);

@@ -226,8 +226,9 @@ func _comando(nome: String, valore) -> void:
 ## Ritratti a destra (pista spostata a sinistra) oppure in fila in basso (cronista più in alto, pista più a destra)
 func imposta_disposizione(d: String) -> void:
 	ui.imposta_disposizione(d, m)
-	ip.spostamento_ui = Vector2(0.1, 0.12) if d == "destra" else Vector2(-0.12, 0.17)
-	ip.zoom_extra = 1.0 if d == "destra" else 1.12
+	# a sinistra resta la colonna del cronista con il suo fumetto
+	ip.spostamento_ui = Vector2(-0.01, 0.1) if d == "destra" else Vector2(-0.12, 0.17)
+	ip.zoom_extra = 1.25 if d == "destra" else 1.14
 
 ## lenta 0.7, normale 1, veloce 1.8: animazioni, attese e voce del cronista
 func imposta_velocita(x: float) -> void:
