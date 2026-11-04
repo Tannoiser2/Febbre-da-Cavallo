@@ -73,8 +73,15 @@ func _ready() -> void:
 
 func _aggiungi_bot() -> void:
 	_n_bot += 1
-	var nomi := ["Zia Rosa", "Nonno Pino", "Cugino Ugo", "Marisa", "Zio Gigi", "Nonna Lina", "Chiara", "Marco", "Paola", "Luca"]
-	m.aggiungi_giocatore("bot%d" % _n_bot, nomi[(_n_bot - 1) % nomi.size()], true)
+	var nomi := ["Nonno Ugo", "Nonna Letizia", "Nonna Nanda", "Nonno Giacinto", "Zio Mimmo", "Zia Carletta",
+		"Zia Rosa", "Nonno Pino", "Zio Gigi", "Nonna Lina"]
+	var usati := {}
+	for g in m.giocatori:
+		usati[g.get("base", g["nome"])] = true
+	var liberi := nomi.filter(func(n): return not usati.has(n))
+	if liberi.is_empty():
+		liberi = nomi
+	m.aggiungi_giocatore("bot%d" % _n_bot, liberi[randi() % liberi.size()], true)
 	ui.aggiorna_sala(m)
 	ui.aggiorna_giro(m)
 
@@ -281,7 +288,7 @@ func chiedi(d: Dictionary) -> Dictionary:
 	for uid in d["per"]:
 		var g := m.trova(uid)
 		if g.get("bot", false):
-			var ritardo := randf_range(0.4, 1.4) if corsa else randf_range(0.7, 1.8)
+			var ritardo := randf_range(1.6, 4.0) if corsa else randf_range(0.7, 1.8)
 			get_tree().create_timer(ritardo / veloce).timeout.connect(_risposta_bot.bind(d["id"], uid))
 	var t0 := Time.get_ticks_msec()
 	var sollecito := false

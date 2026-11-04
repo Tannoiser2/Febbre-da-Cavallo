@@ -102,3 +102,35 @@ button:disabled { background: #bdb3a5 !important; border-color: #9a8f80 !importa
 .avviso { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); background: var(--giallo); color: var(--scuro); padding: 8px 18px;
   border-radius: 12px; font-family: 'Bangers'; font-size: 24px; z-index: 60; border: 3px solid var(--scuro); }
 .inviato { text-align: center; font-size: 22px; color: var(--verde); font-family: 'Bangers'; }
+
+/* cavalli sempre visibili */
+.cavalli.fissi { margin: 8px 0; }
+.cavallo { position: relative; }
+.cavallo.riposa { filter: grayscale(.85); opacity: .7; }
+.cavallo.valido { background: #fff6c8; box-shadow: 0 0 0 3px var(--giallo), 0 4px 0 #333; animation: pulsa 1.2s infinite; }
+.cavalli.fissi .cavallo:disabled { opacity: 1; background: #fff; }
+.cavalli.fissi .cavallo.riposa:disabled { opacity: .6; }
+.cavallo .quote { position: absolute; top: 4px; right: 6px; background: var(--rosso); color: #fff; font-family: 'Bangers'; font-size: 20px;
+  min-width: 28px; height: 28px; border-radius: 14px; display: flex; align-items: center; justify-content: center; padding: 0 5px; }
+.tallbox h2 { display: flex; justify-content: space-between; align-items: center; }
+.tallbox .freccia { font-family: 'Barlow'; font-size: 16px; color: #6b4a2a; }
+/* mappa delle caselle */
+.mappa { width: 100%; height: auto; display: block; margin: 6px 0; touch-action: manipulation; }
+.mappa rect[data-k] { cursor: pointer; }
+/* corsa al dado a tutto schermo */
+.corsadado { position: fixed; inset: 0; z-index: 40; background: radial-gradient(circle, #ffd23f, #b8202a 80%); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center; padding: 20px; color: #fff; }
+.corsadado h1 { font-size: 58px; text-shadow: 3px 3px 0 #5a0a0a; }
+.corsadado p { font-size: 22px; text-shadow: 1px 1px 2px #000; }
+.dadi.grandi { gap: 18px; margin: 18px 0; }
+.dadi.grandi .dado { width: 130px; height: 130px; font-size: 90px; }
+.dadi.grandi .dado.doppio { font-size: 52px; }
+.dadi.grandi .dado:disabled { opacity: .45; }
+.dadobox .chi { font-family: 'Bangers'; font-size: 24px; min-height: 30px; color: #fff; text-shadow: 2px 2px 0 #000; }
+/* lampo quando tocca a te */
+body.lampo::after { content: ''; position: fixed; inset: 0; background: #fff; pointer-events: none; z-index: 99; animation: lampo .7s ease-out; opacity: 0; }
+@keyframes lampo { 0% { opacity: .85; } 100% { opacity: 0; } }
+.cavalli.fissi .cavallo:disabled { color: var(--scuro) !important; background: #fff !important; border-width: 4px; }
+.cavalli.fissi .cavallo.riposa:disabled { background: #e8e2d8 !important; }
+.cavallo .quote { top: auto; bottom: 4px; }
+.corsadado .piccolo { color: #fff8d0; }

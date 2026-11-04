@@ -40,8 +40,8 @@ I telefoni aprono `telefono.html` dal QR code, oppure scrivono il codice di 4 le
      **colonna** della casella: un token vale per tutte le caselle affiancate da un bordo all'altro della pista
      (sulla TV la colonna è colorata d'azzurro). Chi lo ha pescato decide cavallo e casella quando serve.
 4. **Corsa al dado** - ogni tanto (con almeno 3 giocatori) la TV tira 2 dadi (3 con più di 5 giocatori),
-   estrae altrettanti giocatori, anche fra quelli che hanno già giocato nel giro, e sui loro telefoni compaiono i dadi: si fa a gara a
-   prenderli, e ogni dado preso scende sotto con il nome di chi l'ha preso. Poi tutti giocano il loro dado, **dal più lento al più
+   e **tutti i giocatori** (anche chi ha già giocato nel giro) fanno a gara a prenderli dal telefono, che mostra
+   la corsa a tutto schermo: chi non è abbastanza svelto resta senza dado. Si fa a gara a prenderli, e ogni dado preso scende sotto con il nome di chi l'ha preso. Poi tutti giocano il loro dado, **dal più lento al più
    veloce**: chi l'ha preso per primo gioca per ultimo.
 5. **Arrivo e premi** - vince il primo cavallo che oltrepassa l'ultima casella. Si svelano le puntate:
    ognuno incassa tante quote quanti sono i punti dei suoi talloncini del cavallo vincente. Sul telefono di
@@ -91,6 +91,17 @@ Nella sala d'attesa, **Token o carte**. Con le carte (32 carte del film, in `ass
   cavallo -2, cavallo +4, cavallo riattivato, rimescola (le carte sulla pista tornano nel mazzo), paga un'altra
   quota (chi ha pescato la carta paga un'altra posta, che va nel montepremi);
 - **Modifica carte** sceglie quali carte ci sono nel mazzo.
+
+## Il telefono
+
+- In alto il proprio nome e ritratto; sotto il fumetto del cronista.
+- Gli otto cavalli sono sempre visibili (grigi quelli Disattivi), con nell'angolo le quote che hai su quel cavallo;
+  quando devi scegliere un cavallo si illuminano quelli validi.
+- Sotto i cavalli il pulsante **Tira il dado**; la casella d'arrivo si sceglie su un pezzo di pista disegnato
+  (da sinistra a destra, corsia interna in alto, i cavalli come pallini colorati).
+- I talloncini stanno in un box chiuso: si apre e si chiude toccandolo.
+- Quando tocca a te il telefono suona e lo schermo lampeggia; sui telefoni Android vibra anche (su iPhone le
+  pagine web non possono far vibrare il telefono).
 
 ## Comandi sulla TV
 

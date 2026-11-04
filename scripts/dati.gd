@@ -336,12 +336,12 @@ const FRASI_TOKEN := {
 }
 
 ## Tutte le pose del cronista (assets/avatar/<nome>.webp, le stesse di Mercante in fiera)
-const TUTTE_POSE := ["abbraccio", "affare", "applaude", "attesa", "attesa_b", "attesa_occhi", "base", "brindisi", "busta", "busta_premio", "campanella", "carretto", "carta", "carta_b", "conta1", "conta2", "conta3", "disperato", "doppietta", "duello", "festeggia", "inchino", "indica", "indica_b", "lacrima", "lente", "martello", "megafono", "mercato", "occhiolino", "occhiolino_b", "orecchio", "orologio", "parla", "parla_b", "parla_c", "pausa", "pensa", "pensieroso", "pergamena", "regalo", "ride", "rullo", "sacco_aperto", "saluta", "sbadiglio", "soldi", "soldi_pioggia", "sorpreso", "stretta", "sussurra", "tensione", "tripletta", "triste", "triste_b", "trofeo", "wow"]
+const TUTTE_POSE := ["abbraccio", "affare", "applaude", "attesa", "attesa_b", "attesa_occhi", "base", "brindisi", "busta", "busta_premio", "campanella", "carretto", "carta", "carta_b", "conta1", "conta2", "conta3", "disperato", "doppietta", "festeggia", "inchino", "indica", "indica_b", "lacrima", "lente", "martello", "megafono", "mercato", "occhiolino", "occhiolino_b", "orecchio", "orologio", "parla", "parla_b", "parla_c", "pausa", "pensa", "pensieroso", "pergamena", "regalo", "ride", "rullo", "sacco_aperto", "saluta", "sbadiglio", "soldi", "soldi_pioggia", "sorpreso", "stretta", "sussurra", "tensione", "tripletta", "triste", "triste_b", "trofeo", "wow"]
 
 ## Per ogni posa chiesta se ne sceglie una simile, così il cronista cambia spesso espressione
 const VARIANTI_POSA := {
 	"parla": ["parla", "parla_b", "parla_c", "mercato", "abbraccio", "megafono", "occhiolino_b"],
-	"indica": ["indica", "indica_b", "duello", "occhiolino_b", "megafono"],
+	"indica": ["indica", "indica_b", "occhiolino_b", "megafono"],
 	"saluta": ["saluta", "inchino", "abbraccio", "wow", "stretta"],
 	"sorpreso": ["sorpreso", "wow", "disperato", "tensione", "lente"],
 	"ride": ["ride", "applaude", "occhiolino", "festeggia"],

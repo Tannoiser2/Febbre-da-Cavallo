@@ -112,47 +112,92 @@ function cronista() {
   return `<div class="cronista"><img src="img/avatar/saluta.webp" alt=""><div class="fumetto">${esc(S.frase)}</div></div>`;
 }
 
+function mieQuote() {
+  const val = {};
+  if (mio?.talloncini) for (const t of mio.talloncini) val[t.c] = (val[t.c] || 0) + t.q;
+  return val;
+}
+
+// I talloncini stanno in un box chiuso: si apre e si chiude toccandolo
 function talloncini(vincitore = -1) {
   if (!mio || mio.pila < 0) return '';
-  // raggruppati per cavallo: con pochi giocatori le pile sono grandi
   const gruppi = {};
   for (const x of mio.talloncini) {
     if (!gruppi[x.c]) gruppi[x.c] = { c: x.c, nome: x.nome, col: x.col, q: [] };
     gruppi[x.c].q.push(x.q);
   }
   const ord = Object.values(gruppi).sort((a, b) => b.q.reduce((s, v) => s + v, 0) - a.q.reduce((s, v) => s + v, 0));
+  const aperto = mostraTal || vincitore >= 0;
   const t = ord.map((g) => `<div class="tal ${g.c === vincitore ? 'vince' : ''}" style="background:${esc(g.col)}">
     <b>${g.q.reduce((s, v) => s + v, 0)}</b>${esc(g.nome)}${g.q.length > 1 ? `<small>${g.q.join(' + ')}</small>` : ''}</div>`).join('');
-  const coperti = !mostraTal && vincitore < 0;
-  return `<div class="box"><h2>I tuoi talloncini (pila ${esc(mio.lettera)})</h2>
-    <div class="talloncini ${coperti ? 'coperti' : ''}">${t}</div>
-    ${vincitore < 0 ? `<button class="grigio" id="mostra">${mostraTal ? 'NASCONDI' : 'GUARDA DI NASCOSTO'}</button>` : ''}</div>`;
+  return `<div class="box tallbox" id="mostra"><h2>I tuoi talloncini (pila ${esc(mio.lettera)}) <span class="freccia">${aperto ? 'chiudi' : 'apri'}</span></h2>
+    ${aperto ? `<div class="talloncini">${t}</div>` : '<p class="piccolo">Tocca per guardarli di nascosto.</p>'}</div>`;
 }
 
-function classifica() {
+// I cavalli sono sempre visibili: si possono toccare solo quando si deve scegliere un cavallo
+function cavalli(d) {
   if (!S?.cavalli) return '';
-  const val = {};
-  if (mio?.talloncini) for (const t of mio.talloncini) val[t.c] = (val[t.c] || 0) + t.q;
-  const ord = [...S.cavalli].sort((a, b) => b.p - a.p);
-  const righe = ord.map((c) => `<div class="r ${c.attivo ? '' : 'riposa'}"><span class="col" style="background:${esc(c.col)}"></span>
-    <span style="width:104px">${esc(c.nome)}</span><span class="barra"><i style="width:${Math.max(2, Math.min(100, (c.p + 0.02) * 100))}%;background:${esc(c.col)}"></i></span>
-    <span class="st">${esc(c.stato)}</span>${mostraTal && val[c.id] ? `<span class="mio">${val[c.id]}</span>` : '<span class="mio"></span>'}</div>`).join('');
-  return `<div class="box classifica"><h2>La corsa</h2>${righe}</div>`;
+  const val = mieQuote();
+  const scelta = d && d.tipo === 'cavallo' && inviato !== d.id ? Object.fromEntries(d.opzioni.map((o) => [o.k, o.ok])) : null;
+  return `<div class="cavalli fissi">${S.cavalli.map((c) => {
+    const ok = scelta ? !!scelta[c.id] : false;
+    return `<button class="cavallo ${c.attivo ? '' : 'riposa'} ${scelta && ok ? 'valido' : ''}" ${ok ? `data-k="${c.id}"` : 'disabled'}
+      style="border-color:${esc(c.col)}"><span class="col" style="background:${esc(c.col)}"></span>
+      <span>${esc(c.nome)}<small>${esc(c.stato)}</small></span>${val[c.id] ? `<span class="quote">${val[c.id]}</span>` : ''}</button>`;
+  }).join('')}</div>`;
+}
+
+// La scelta della casella si fa su un pezzo di pista disegnato come quello della TV
+function mappa(d) {
+  const m = d.mappa;
+  if (!m) return '';
+  const W = 340, LANE = 46, PAD = 10;
+  const sc = (W - 2 * PAD) / Math.max(1, m.hi - m.lo);
+  const H = LANE * 3 + 2 * PAD;
+  let svg = `<svg class="mappa" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="${W}" height="${H}" rx="12" fill="#2f8f3f"/>
+    <rect x="${PAD - 4}" y="${PAD - 4}" width="${W - 2 * PAD + 8}" height="${LANE * 3 + 8}" fill="#1d7a4a"/>`;
+  for (const c of m.celle) {
+    const x = PAD + (c.a - m.lo) * sc, w = (c.b - c.a) * sc, y = PAD + c.l * LANE;
+    const scelta = c.n != null;
+    svg += `<rect x="${x + 1.5}" y="${y + 1.5}" width="${Math.max(2, w - 3)}" height="${LANE - 3}" rx="4"
+      fill="${scelta ? '#ffe36b' : (c.c ? '#f6d978' : '#ebc248')}" stroke="${scelta ? '#ff2d55' : '#1d7a4a'}" stroke-width="${scelta ? 4 : 1.5}"
+      ${scelta ? `data-k="${c.k}"` : ''}/>`;
+    if (c.tok) svg += `<rect x="${x + 3}" y="${y + 3}" width="${Math.max(2, w - 6)}" height="${LANE - 6}" rx="3" fill="#7fc8ff" opacity=".45" pointer-events="none"/>`;
+    if (c.cav) svg += `<circle cx="${x + w / 2}" cy="${y + LANE / 2}" r="13" fill="${c.cav}" stroke="${c.io ? '#fff' : '#000'}" stroke-width="${c.io ? 4 : 2}" pointer-events="none"/>`;
+    if (scelta) svg += `<text x="${x + w / 2}" y="${y + LANE / 2 + 10}" text-anchor="middle" font-family="Bangers" font-size="30" fill="#b0002a" pointer-events="none">${c.n}</text>`;
+  }
+  svg += `</svg>`;
+  return `<p class="piccolo">Il cavallo va da sinistra a destra; in alto la corsia interna. Tocca la casella.</p>${svg}`;
+}
+
+// Corsa al dado: a tutto schermo, finché non sono stati presi tutti i dadi
+function corsaDado(d) {
+  const dc = S?.dadi_corsa || [];
+  if (!S?.in_corsa_dado || !dc.length || dc.every((x) => x.chi)) return '';
+  const mia = d && d.tipo === 'prendi' && inviato !== d.id;
+  const preso = dc.find((x) => x.chi === S.giocatori.find((g) => g.uid === uid)?.nome);
+  return `<div class="corsadado"><h1>CORSA AL DADO!</h1><p>${mia ? 'Tocca un dado, presto!' : (preso ? 'Hai preso il tuo dado!' : 'Aspetta...')}</p>
+    <div class="dadi grandi">${dc.map((x, i) => {
+      const libero = !x.chi && mia;
+      return `<div class="dadobox"><button class="dado ${x.e ? 'doppio' : ''}" ${libero ? `data-k="${i}"` : 'disabled'}>${x.e ? `+${x.n}<br>-${x.n}` : '+' + esc(x.n)}${x.v ? '<span class="pv"></span>' : ''}</button>
+        <div class="chi">${esc(x.chi || '')}</div></div>`;
+    }).join('')}</div><p class="piccolo">Il pallino verde fa pescare; con +N -N puoi anche tornare indietro. Chi prende per primo gioca per ultimo.</p></div>`;
 }
 
 function domanda() {
   const d = S?.domanda;
   if (!d || !d.per || !d.per.includes(uid)) return '';
+  if (d.tipo === 'prendi') return '';
   if (inviato === d.id) return `<div class="box"><div class="inviato">Fatto! Guarda la TV...</div></div>`;
   let corpo = '';
   const op = d.opzioni || [];
   if (d.tipo === 'tira') {
     corpo = `<button class="verde grande" data-k="tira">TIRA IL DADO!</button>`;
   } else if (d.tipo === 'cavallo') {
-    corpo = `<div class="cavalli">${op.map((o) => `<button class="cavallo" data-k="${esc(o.k)}" ${o.ok ? '' : 'disabled'}
-      style="border-color:${esc(o.c)}"><span class="col" style="background:${esc(o.c)}"></span><span>${esc(o.t)}<small>${esc(o.s || '')}</small></span></button>`).join('')}</div>`;
+    corpo = `<p class="piccolo">Tocca uno dei cavalli illuminati qui sotto.</p>`;
   } else if (d.tipo === 'casella') {
-    corpo = `<p class="piccolo">I numeri sono segnati sulla pista, sulla TV.</p><div class="scelte">${op.map((o) => `<button class="casella" data-k="${esc(o.k)}" ${o.ok ? '' : 'disabled'}>
+    corpo = d.mappa ? mappa(d) : `<div class="scelte">${op.map((o) => `<button class="casella" data-k="${esc(o.k)}">
       <span class="num">${esc(o.t)}</span><small>${esc(o.s || '')}</small></button>`).join('')}</div>`;
   } else if (d.tipo === 'prendi') {
     corpo = `<div class="dadi">${op.map((o) => `<button class="dado ${o.e ? 'doppio' : ''}" data-k="${esc(o.k)}" ${o.ok ? '' : 'disabled'}>${o.e ? `+${o.n}<br>-${o.n}` : '+' + esc(o.n)}${o.v ? '<span class="pv"></span>' : ''}</button>`).join('')}</div>
@@ -194,30 +239,50 @@ function disegna() {
   if (!io && S.fase === 'attesa') {
     h += `<div class="box"><h2>Un attimo...</h2><p>Sto entrando nella stanza ${esc(codice)}.</p></div>`;
   } else if (!io) {
-    h += `<div class="box"><h2>Corsa già partita</h2><p>Questa corsa è già cominciata: potrai entrare alla prossima.</p></div>${cronista()}${classifica()}`;
+    h += `<div class="box"><h2>Corsa già partita</h2><p>Questa corsa è già cominciata: potrai entrare alla prossima.</p></div>${cronista()}${cavalli(null)}`;
   } else if (S.fase === 'attesa') {
     h += `<div class="box"><h2>Sei dentro, ${esc(nome)}!</h2><p>Siete in ${S.giocatori.length}. Quando ci sono tutti, si parte dalla TV.</p>
-      <p class="piccolo">Tieni il telefono acceso: quando tocca a te vibra.</p></div>${cronista()}`;
+      <p class="piccolo">Tieni il telefono acceso e il volume alto: quando tocca a te suona e lampeggia (e vibra, sui telefoni Android).</p></div>${cronista()}`;
   } else {
+    const dd = S.domanda && S.domanda.per && S.domanda.per.includes(uid) ? S.domanda : null;
     const d = domanda();
     const ris = risultato();
-    if (S.di_turno && S.di_turno !== uid && !d) h += `<div class="tocca">Tocca a ${esc(S.nome_turno)}</div>`;
-    h += ris + d + cronista();
-    if (S.fase === 'pile' && !d) h += `<div class="box"><p>Gli altri stanno scegliendo la pila...</p></div>`;
-    h += talloncini(ris ? S.vincitore : -1);
-    if (S.fase === 'corsa' || S.fase === 'svela') h += classifica();
-    if (d && S.domanda.id !== ultimaDomanda) {
+    const cd = corsaDado(dd);
+    if (cd) {
+      h += cd;
+    } else {
+      if (S.di_turno && S.di_turno !== uid && !d) h += `<div class="tocca">Tocca a ${esc(S.nome_turno)}</div>`;
+      if (S.di_turno === uid && !d) h += `<div class="tocca">Tocca a te!</div>`;
+      h += ris;
+      const tira = dd && dd.tipo === 'tira';
+      const conCavalli = (S.fase === 'corsa' || S.fase === 'svela') && !ris;
+      if (!tira) h += d;
+      h += cronista();
+      if (S.fase === 'pile' && !d) h += `<div class="box"><p>Gli altri stanno scegliendo la pila...</p></div>`;
+      if (conCavalli) h += cavalli(dd);
+      if (tira) h += d;
+      h += talloncini(ris ? S.vincitore : -1);
+    }
+    if (dd && S.domanda.id !== ultimaDomanda) {
       ultimaDomanda = S.domanda.id;
-      try { navigator.vibrate?.(S.domanda.tipo === 'prendi' ? [80, 40, 80] : 150); } catch (e) { /* ok */ }
-      suona('ding');
+      richiamo(S.domanda.tipo);
     }
   }
   app.innerHTML = h;
   app.querySelectorAll('[data-k]').forEach((b) => {
-    b.onclick = () => rispondi(b.dataset.k);
+    b.onclick = () => rispondi(b.getAttribute('data-k'));
   });
   const m = app.querySelector('#mostra');
   if (m) m.onclick = () => { mostraTal = !mostraTal; disegna(); };
+}
+
+// Quando tocca a te: vibrazione (Android), suono e lampo dello schermo (anche su iPhone, dove le pagine web non possono vibrare)
+function richiamo(tipo) {
+  try { navigator.vibrate?.(tipo === 'prendi' ? [80, 40, 80, 40, 80] : [200, 80, 200]); } catch (e) { /* ok */ }
+  suona(tipo === 'prendi' ? 'preso' : 'ding');
+  document.body.classList.remove('lampo');
+  void document.body.offsetWidth;
+  document.body.classList.add('lampo');
 }
 
 async function rispondi(k) {

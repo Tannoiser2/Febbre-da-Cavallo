@@ -36,6 +36,7 @@ var n_corsa := 0
 var n_turno := 0
 var salta_prossimo := false
 var in_corsa_dado := false
+var dadi_corsa := []        # corsa al dado: i dadi in palio e chi li ha presi (per i telefoni)
 var corsa_per_tutti := false   # il "?" chiede la corsa al dado per tutti i giocatori, alla fine del turno
 var cella_interrogativo := -1
 var _quasi := {}             # cavalli già annunciati vicino al traguardo  # dove sta il "?" che ha chiesto la corsa (torna nel sacchetto dopo la corsa)
@@ -313,11 +314,15 @@ func corsa_al_dado(tutti := false) -> void:
 	var facce := []
 	for i in k:
 		facce.append(Dati.DADO[randi() % Dati.DADO.size()])
+	# partecipano tutti i giocatori, anche chi ha già giocato nel giro: vince chi è più svelto
 	var scelti := []
-	for i in k:
-		scelti.append(estrai_giocatore(scelti, true))
+	for g in giocatori:
+		scelti.append(g["uid"])
 	dado_attuale = facce
 	in_corsa_dado = true
+	dadi_corsa = []
+	for f in facce:
+		dadi_corsa.append({"t": Dati.testo_faccia(f), "n": f["n"], "v": f["v"], "e": f.get("e", false), "chi": ""})
 	cambiato.emit()
 	await v.dici("Corsa al dado per tutti! Veloci col dito!" if tutti else Dati.frase("corsa_dado"), "suspense")
 	await v.dado(facce)
@@ -325,23 +330,27 @@ func corsa_al_dado(tutti := false) -> void:
 	var liberi := scelti.duplicate()
 	var presi := {}
 	var ordine := []
-	while liberi.size() > 1:
+	while presi.size() < facce.size() and liberi.size() > 0 and not (liberi.size() == 1 and presi.size() == facce.size() - 1 and facce.size() >= giocatori.size()):
 		var op := []
 		for i in facce.size():
 			op.append({"k": i, "t": Dati.testo_faccia(facce[i]), "n": facce[i]["n"], "v": facce[i]["v"], "e": facce[i].get("e", false), "ok": not presi.has(i)})
 		var r: Dictionary = await _chiedi(liberi, "prendi", "Prendi un dado, presto!", op,
 			{"sotto": "Il più veloce sceglie per primo", "scopo": "prendi", "corsa": true})
 		presi[int(r["k"])] = r["uid"]
+		dadi_corsa[int(r["k"])]["chi"] = nome_g(r["uid"])
 		liberi.erase(r["uid"])
+		cambiato.emit()
 		ordine.append([r["uid"], facce[int(r["k"])]])
 		if ordine.size() == 1:
 			await v.dici(Dati.frase("preso", {"g": nome_g(r["uid"])}), "ride")
 		await v.dado_preso(int(r["k"]), r["uid"])
 	for i in facce.size():
-		if not presi.has(i):
+		if not presi.has(i) and liberi.size():
 			ordine.append([liberi[0], facce[i]])
+			dadi_corsa[i]["chi"] = nome_g(liberi[0])
 			await v.dado_preso(i, liberi[0])
 			break
+	cambiato.emit()
 	# si gioca dal più lento al più veloce: chi ha preso per primo gioca per ultimo
 	ordine.reverse()
 	await v.dici("Ora tutti giocano il loro dado: dal più lento al più veloce!", "parla")
@@ -357,6 +366,7 @@ func corsa_al_dado(tutti := false) -> void:
 		await v.dici("Tocca a %s con il suo %s!" % [nome_g(uid), Dati.testo_faccia(p[1])], "indica")
 		await esegui_mossa(uid, p[1])
 	in_corsa_dado = false
+	dadi_corsa = []
 
 ## Le mosse possibili per un cavallo con n passi: {"avanti": dest, "indietro": dest}.
 ## Indietro solo se la faccia del dado è "+N -N".
@@ -515,8 +525,51 @@ func chiedi_casella(uid: String, titolo: String, scelte: Array, rispetto: int, e
 				ds += pista.lunghezza
 			s = "una colonna avanti" if ds > 0 else "una colonna indietro"
 		op.append({"k": c, "t": str(i + 1), "s": s, "ok": true, "cella": c})
+	extra["mappa"] = mappa_caselle(scelte, rispetto, extra.get("cavallo", -1))
 	var r: Dictionary = await _chiedi([uid], "casella", titolo, op, extra)
 	return int(r["k"])
+
+## Pezzo di pista "srotolato" attorno alle caselle da scegliere, per disegnarlo sul telefono:
+## x lungo la pista (0 = casella di partenza del cavallo), l = corsia (0 interna), n = numero della scelta
+func mappa_caselle(scelte: Array, rispetto: int, cid: int) -> Dictionary:
+	var ref := pista.progresso(rispetto) if rispetto >= 0 else 0.0
+	var rel := func(s: float) -> float:
+		var d := s - ref
+		if d > pista.lunghezza / 2.0:
+			d -= pista.lunghezza
+		elif d < -pista.lunghezza / 2.0:
+			d += pista.lunghezza
+		return d
+	var lo := 0.0 if rispetto >= 0 else -2.0
+	var hi := 0.0
+	for c in scelte:
+		lo = minf(lo, rel.call(pista.celle[c]["s0"]))
+		hi = maxf(hi, rel.call(pista.celle[c]["s1"]))
+	lo -= Pista.LUNG_FILA * 0.6
+	hi += Pista.LUNG_FILA * 0.6
+	var occ := {}
+	for x in cavalli:
+		if x["cella"] >= 0 and not x["zoppo"]:
+			occ[x["cella"]] = x["id"]
+	var celle_m := []
+	for cc in pista.celle:
+		var a: float = rel.call(cc["s0"])
+		var b: float = a + (cc["s1"] - cc["s0"])
+		if b < lo or a > hi:
+			continue
+		var e := {"a": snappedf(a, 0.01), "b": snappedf(b, 0.01), "l": cc["corsia"], "c": cc["tipo"] == "c"}
+		if occ.has(cc["id"]):
+			e["cav"] = Dati.CAVALLI[occ[cc["id"]]]["colore"]
+			e["io"] = occ[cc["id"]] == cid
+		var i := scelte.find(cc["id"])
+		if i >= 0:
+			e["n"] = i + 1
+			e["k"] = cc["id"]
+		if token.has(cc["id"]):
+			e["tok"] = true
+		celle_m.append(e)
+	return {"lo": snappedf(lo, 0.01), "hi": snappedf(hi, 0.01), "celle": celle_m,
+		"col": Dati.CAVALLI[cid]["colore"] if cid >= 0 else ""}
 
 # ------------------------------------------------------------------ token
 ## Il token vale per tutta la "colonna": le caselle affiancate da un bordo all'altro della pista.
@@ -993,7 +1046,7 @@ func stato_pubblico() -> Dictionary:
 		"fase": fase, "corsa": n_corsa, "turno": n_turno, "giocatori": gs, "cavalli": cs,
 		"di_turno": di_turno, "nome_turno": nome_g(di_turno) if di_turno != "" else "",
 		"dado": dado_attuale, "domanda": domanda, "vincitore": vincitore, "risultati": risultati,
-		"cfg": cfg, "quota": quota_euro(), "salta": salta_prossimo,
+		"cfg": cfg, "quota": quota_euro(), "salta": salta_prossimo, "dadi_corsa": dadi_corsa, "in_corsa_dado": in_corsa_dado,
 	}
 
 ## Talloncini segreti di un giocatore
