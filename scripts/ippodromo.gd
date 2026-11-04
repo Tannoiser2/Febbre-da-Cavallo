@@ -26,7 +26,7 @@ var tex_token := {}
 var _mesh_cavallo: Mesh
 var _zoppi := {}
 var _in_moto := {}
-var zoom_segui := 0.5
+var zoom_segui := 0.4
 var zoom_extra := 1.0
 var aree_libere := []   # rettangoli dello schermo (pixel) liberi dall'interfaccia: la pista si allarga nel migliore
 var spostamento_ui := Vector2(0.0, 0.0)   # quanto spostare la vista per lasciare spazio all'interfaccia

@@ -141,3 +141,12 @@ body.lampo::after { content: ''; position: fixed; inset: 0; background: #fff; po
 .mappa { max-width: 100%; }
 .centro { text-align: center; }
 .muovi { font-size: 34px; padding: 14px 8px; white-space: nowrap; }
+
+.scegli { display: grid; grid-template-columns: 44% 1fr; gap: 8px; align-items: start; margin: 8px 0; }
+.scegli .colonna { display: flex; flex-direction: column; gap: 5px; }
+.cavallo.compatto { font-size: 19px; padding: 5px 6px; gap: 6px; border-width: 3px !important; box-shadow: 0 2px 0 #333; }
+.cavallo.compatto .col { width: 18px; height: 18px; }
+.cavallo.compatto small { font-size: 12px; }
+.cavallo.compatto .quote { min-width: 22px; height: 22px; font-size: 16px; }
+.pistina { position: sticky; top: 6px; }
+.pistina .mappa { width: 100%; max-height: 80vh; }

@@ -129,6 +129,19 @@ func _azione(uid: String, e: Dictionary) -> void:
 		return
 	if not _domanda["per"].has(uid):
 		return
+	var ks := str(e.get("k"))
+	if ks.contains(":") and _domanda.has("anteprime"):
+		# cavallo e casella insieme ("cavallo:casella", -2 = traguardo)
+		var pz := ks.split(":")
+		var mp: Dictionary = _domanda["anteprime"].get(pz[0], {})
+		var cella := int(pz[1])
+		var ok: bool = cella == Pista.TRAGUARDO and bool(mp.get("arrivo", false))
+		for c in mp.get("celle", []):
+			if c.has("n") and int(c["k"]) == cella:
+				ok = true
+		if ok:
+			_risposta = {"uid": uid, "k": int(pz[0]), "cella": cella}
+		return
 	for o in _domanda["opzioni"]:
 		if str(o["k"]) == str(e.get("k")) and o["ok"]:
 			_risposta = {"uid": uid, "k": o["k"]}

@@ -188,7 +188,7 @@ func mostra_domanda(d: Dictionary) -> void:
 func guarda(cid: int, d: Dictionary) -> void:
 	if cid < 0 or cid > 7:
 		return
-	ip.zoom_segui = 0.55
+	ip.zoom_segui = 0.4
 	ip._segui = ip.cavalli[cid]
 	ip.evidenzia_cavalli([cid])
 	var mp: Dictionary = d.get("anteprime", {}).get(str(cid), {})

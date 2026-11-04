@@ -138,33 +138,42 @@ function talloncini(vincitore = -1) {
 // Per muovere: il primo tocco mostra dove può andare (e la TV lo inquadra), poi si conferma con MUOVI
 let anteprima = -1;
 let anteprimaPer = -1;
+function guarda(k) {
+  anteprima = k;
+  const d = S?.domanda;
+  if (d) rete.push(`${RADICE}/${codice}/azioni`, { da: uid, p: d.id, k: String(k), g: 1, t: Date.now() }).catch(() => {});
+}
 function cavalli(d) {
   if (!S?.cavalli) return '';
   const val = mieQuote();
   const attiva = d && d.tipo === 'cavallo' && inviato !== d.id;
   const scelta = attiva ? Object.fromEntries(d.opzioni.map((o) => [o.k, o.ok])) : null;
   const conAnteprima = attiva && d.anteprime;
-  if (!attiva || anteprimaPer !== d.id) { anteprima = -1; anteprimaPer = attiva ? d.id : -1; }
-  let h = `<div class="cavalli fissi">${S.cavalli.map((c) => {
+  if (!attiva || anteprimaPer !== d.id) {
+    anteprima = -1;
+    anteprimaPer = attiva ? d.id : -1;
+    // si parte già guardando il primo cavallo che si può muovere
+    if (conAnteprima) { const primo = d.opzioni.find((o) => o.ok); if (primo) guarda(Number(primo.k)); }
+  }
+  const bottone = (c, compatto) => {
     const ok = scelta ? !!scelta[c.id] : false;
     const k = conAnteprima ? `data-a="${c.id}"` : `data-k="${c.id}"`;
-    return `<button class="cavallo ${c.attivo ? '' : 'riposa'} ${scelta && ok ? 'valido' : ''} ${anteprima === c.id ? 'scelto' : ''}" ${ok ? k : 'disabled'}
+    return `<button class="cavallo ${compatto ? 'compatto' : ''} ${c.attivo ? '' : 'riposa'} ${scelta && ok ? 'valido' : ''} ${anteprima === c.id ? 'scelto' : ''}" ${ok ? k : 'disabled'}
       style="border-color:${esc(c.col)}"><span class="col" style="background:${esc(c.col)}"></span>
       <span>${esc(c.nome)}<small>${esc(c.stato)}</small></span>${val[c.id] ? `<span class="quote">${val[c.id]}</span>` : ''}</button>`;
-  }).join('')}</div>`;
+  };
   if (conAnteprima && anteprima >= 0) {
-    const cv = S.cavalli[anteprima];
-    h += `<div class="box anteprima"><button class="verde muovi" data-k="${anteprima}">MUOVI ${esc(cv.nome.toUpperCase())}</button>
-      ${mappa(d.anteprime[String(anteprima)], false)}</div>`;
-  } else if (conAnteprima) {
-    h += `<p class="piccolo centro">Tocca un cavallo illuminato per vedere dove può andare.</p>`;
+    // a sinistra i cavalli uno sopra l'altro, a destra la pista: si tocca la casella e si muove
+    return `<div class="scegli"><div class="colonna">${S.cavalli.map((c) => bottone(c, true)).join('')}</div>
+      <div class="pistina">${mappa(d.anteprime[String(anteprima)], true, anteprima)}</div></div>`;
   }
-  return h;
+  return `<div class="cavalli fissi">${S.cavalli.map((c) => bottone(c, false)).join('')}</div>`;
 }
 
 // Pezzo di pista in verticale (si va verso l'alto, corsia interna a sinistra), con i cavalli,
 // le caselle dove si può arrivare (numerate) e accanto i token o le carte della colonna
-function mappa(m, tocca = true) {
+function mappa(m, tocca = true, cav = null) {
+  const chiave = (k) => (cav == null ? String(k) : `${cav}:${k}`);
   if (!m) return '';
   const LANE = 62, PAD = 10, SIDE = 112, W = PAD * 2 + LANE * 3 + SIDE;
   const span = Math.max(1, m.hi - m.lo);
@@ -174,7 +183,7 @@ function mappa(m, tocca = true) {
   let svg = `<svg class="mappa" viewBox="0 0 ${W} ${H + (m.arrivo ? 40 : 0)}" xmlns="http://www.w3.org/2000/svg" style="max-height:62vh">
     <rect x="0" y="0" width="${W}" height="${H + (m.arrivo ? 40 : 0)}" rx="12" fill="#2f8f3f"/>
     <rect x="${PAD - 5}" y="0" width="${LANE * 3 + 10}" height="${H + (m.arrivo ? 40 : 0)}" fill="#1d7a4a"/>`;
-  if (m.arrivo) svg += `<rect x="${PAD}" y="4" width="${LANE * 3}" height="30" fill="#fff"/><text x="${PAD + LANE * 1.5}" y="28" text-anchor="middle" font-family="Bangers" font-size="26" fill="#b8202a">ARRIVO</text>`;
+  if (m.arrivo) svg += `<rect x="${PAD}" y="4" width="${LANE * 3}" height="30" fill="#fff" stroke="#ff2d55" stroke-width="4" ${tocca ? `data-k="${chiave(-2)}"` : ''}/><text x="${PAD + LANE * 1.5}" y="28" text-anchor="middle" font-family="Bangers" font-size="26" fill="#b8202a" pointer-events="none">ARRIVO</text>`;
   const off = m.arrivo ? 40 : 0;
   const toks = {};
   for (const c of m.celle) {
@@ -182,7 +191,7 @@ function mappa(m, tocca = true) {
     const scelta = c.n != null;
     svg += `<rect x="${x + 2}" y="${y + 2}" width="${LANE - 4}" height="${Math.max(2, h - 4)}" rx="5"
       fill="${scelta ? '#ffe36b' : (c.c ? '#f6d978' : '#ebc248')}" stroke="${scelta ? '#ff2d55' : '#1d7a4a'}" stroke-width="${scelta ? 5 : 1.5}"
-      ${scelta && tocca ? `data-k="${c.k}"` : ''}/>`;
+      ${scelta && tocca ? `data-k="${chiave(c.k)}"` : ''}/>`;
     if (c.tok != null && c.tok !== false) toks[Math.round((c.a + c.b) * 5)] = { tok: c.tok, y: y + h / 2 };
     if (c.cav) svg += `<circle cx="${x + LANE / 2}" cy="${y + h / 2}" r="17" fill="${c.cav}" stroke="${c.io ? '#fff' : '#000'}" stroke-width="${c.io ? 5 : 2}" pointer-events="none"/>`;
     if (scelta) svg += `<text x="${x + LANE / 2}" y="${y + h / 2 + 12}" text-anchor="middle" font-family="Bangers" font-size="34" fill="#b0002a" pointer-events="none">${c.n}</text>`;
@@ -228,7 +237,7 @@ function domanda() {
   if (d.tipo === 'tira') {
     corpo = `<button class="verde grande" data-k="tira">TIRA IL DADO!</button>`;
   } else if (d.tipo === 'cavallo') {
-    corpo = `<p class="piccolo">Tocca uno dei cavalli illuminati qui sotto.</p>`;
+    corpo = d.anteprime ? `<p class="piccolo">Scegli il cavallo a sinistra, poi tocca sulla pista la casella dove va.</p>` : `<p class="piccolo">Tocca uno dei cavalli illuminati qui sotto.</p>`;
   } else if (d.tipo === 'casella') {
     corpo = d.mappa ? `<p class="piccolo">Si va verso l'alto; a sinistra la corsia interna. Tocca la casella.</p>${mappa(d.mappa)}` : `<div class="scelte">${op.map((o) => `<button class="casella" data-k="${esc(o.k)}">
       <span class="num">${esc(o.t)}</span><small>${esc(o.s || '')}</small></button>`).join('')}</div>`;
@@ -306,14 +315,7 @@ function disegna() {
     b.onclick = () => rispondi(b.getAttribute('data-k'));
   });
   app.querySelectorAll('[data-a]').forEach((b) => {
-    b.onclick = () => {
-      anteprima = Number(b.getAttribute('data-a'));
-      const d = S?.domanda;
-      if (d) rete.push(`${RADICE}/${codice}/azioni`, { da: uid, p: d.id, k: String(anteprima), g: 1, t: Date.now() }).catch(() => {});
-      suona('click');
-      disegna();
-      app.querySelector('.anteprima')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
+    b.onclick = () => { guarda(Number(b.getAttribute('data-a'))); suona('click'); disegna(); };
   });
   // i titoli stanno su una riga: se non ci stanno si rimpiccioliscono
   app.querySelectorAll('.domanda h2, .tocca').forEach((el) => {

@@ -50,6 +50,7 @@ var _pid := 0
 var registro := []          # ultime cose successe (per i test)
 var mazzo := []             # versione carte: indici di Dati.CARTE ancora da pescare
 var extra_montepremi := 0.0 # quote pagate in più con "paga un'altra quota"
+var cella_scelta := -99      # dal telefono: cavallo e casella scelti insieme toccando la pista
 var in_mano := 0            # token pescato non ancora rimesso a posto (per i controlli dei test)
 
 func _init() -> void:
@@ -409,6 +410,32 @@ func esegui_mossa(uid: String, faccia: Dictionary) -> void:
 	var cid: int = await chiedi_cavallo(uid, tit, validi, "muovi", {"anteprime": ant})
 	var m := mosse(cid, n, e)
 	var verso := "avanti"
+	var pre := cella_scelta
+	cella_scelta = -99
+	if pre != -99:
+		# dal telefono è arrivata anche la casella: niente altre domande
+		var vp := ""
+		if pre == Pista.TRAGUARDO and m.has("avanti") and m["avanti"]["traguardo"]:
+			vp = "avanti"
+		elif m.has("avanti") and m["avanti"]["celle"].has(pre):
+			vp = "avanti"
+		elif m.has("indietro") and m["indietro"]["celle"].has(pre):
+			vp = "indietro"
+		if vp != "":
+			var dd: Dictionary = m[vp]
+			var da0: int = cavalli[cid]["cella"]
+			await muovi(cid, da0, pre, dd, vp == "avanti")
+			cavalli[cid]["attivo"] = false
+			cambiato.emit()
+			await v.aggiorna()
+			if vincitore >= 0:
+				return
+			if vp == "avanti":
+				await risolvi_casella(uid, cid, faccia["v"], da0, 0)
+			if vincitore >= 0:
+				return
+			await _controlla_ripristino()
+			return
 	if m.size() > 1:
 		var op := [
 			{"k": "avanti", "t": "+%d  avanti" % n, "ok": true},
@@ -500,6 +527,7 @@ func chiedi_cavallo(uid: String, titolo: String, validi: Array, scopo: String, e
 	var e := {"scopo": scopo}
 	e.merge(extra)
 	var r: Dictionary = await _chiedi([uid], "cavallo", titolo, op, e)
+	cella_scelta = int(r.get("cella", -99))
 	return int(r["k"])
 
 func _stato_cavallo(c: Dictionary) -> String:

@@ -99,8 +99,8 @@ Nella sala d'attesa, **Token o carte**. Con le carte (32 carte del film, in `ass
   quando devi scegliere un cavallo si illuminano quelli validi.
 - Sotto i cavalli il pulsante **Tira il dado**. Per muovere si tocca un cavallo: compare il pezzo di pista in
   verticale (si va verso l'alto, corsia interna a sinistra) con le caselle dove può arrivare e, accanto, i token o
-  le carte della colonna; la TV intanto inquadra quel cavallo. Toccando un altro cavallo si guarda quello; con
-  **Muovi** si conferma. Anche la casella d'arrivo si sceglie su questa pista in verticale.
+  le carte della colonna; la TV intanto inquadra quel cavallo. I cavalli stanno in colonna a sinistra e la pista a
+  destra: si tocca un cavallo per guardarlo e poi direttamente la casella d'arrivo (o ARRIVO) per muoverlo.
 - I talloncini stanno in un box chiuso: si apre e si chiude toccandolo.
 - Quando tocca a te il telefono suona e lo schermo lampeggia; sui telefoni Android vibra anche (su iPhone le
   pagine web non possono far vibrare il telefono).
