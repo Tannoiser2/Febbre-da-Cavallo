@@ -59,7 +59,8 @@ var _pose_tween: Tween
 var titolo_img: TextureRect
 var velocita := 1.0
 var giro_box: PanelContainer        # in basso a destra: i ritratti dei giocatori, chi ha già giocato nel giro
-var giro_flow: HBoxContainer
+var giro_flow: GridContainer
+var quota_lbl: Label
 var giro_carte := {}                # uid -> {p, ritratto, nome, timbro}
 var _giro_chiave := ""
 var _tex_ritratti := {}
@@ -178,16 +179,20 @@ func _crea_destra() -> void:
 	pannello_destra.add_theme_stylebox_override("panel", stile(Color(1.0, 0.96, 0.84, 0.94), ROSSO, 20, 5))
 	pannello_destra.anchor_left = 1.0
 	pannello_destra.anchor_right = 1.0
-	pannello_destra.offset_left = -400
+	pannello_destra.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	pannello_destra.offset_right = -16
+	pannello_destra.custom_minimum_size = Vector2(330, 0)
 	pannello_destra.offset_top = 16
 	pannello_destra.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(pannello_destra)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 4)
 	pannello_destra.add_child(v)
-	v.add_child(etichetta("IN CORSA", f_titolo, 38, ROSSO))
+	var tit_corsa := etichetta("IN CORSA", f_titolo, 38, ROSSO)
+	tit_corsa.visible = false
+	v.add_child(tit_corsa)
 	classifica = VBoxContainer.new()
+	classifica.visible = false
 	classifica.add_theme_constant_override("separation", 3)
 	v.add_child(classifica)
 	for i in 8:
@@ -207,12 +212,18 @@ func _crea_destra() -> void:
 		r.add_child(st)
 		classifica.add_child(r)
 		righe_cavalli.append({"riga": r, "col": col, "nome": nome, "stato": st})
-	var sep := HSeparator.new()
-	v.add_child(sep)
-	montepremi = etichetta("", f_titolo, 30, Color("#1d6b3a"))
+	# della colonna di destra resta solo il montepremi: i cavalli si vedono in pista e i giocatori nei ritratti
+	montepremi = etichetta("", f_titolo, 34, Color("#1d6b3a"))
+	montepremi.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(montepremi)
-	v.add_child(etichetta("GIOCATORI", f_titolo, 30, ROSSO))
+	quota_lbl = etichetta("", f_testo, 26, SCURO)
+	quota_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(quota_lbl)
+	var tg := etichetta("GIOCATORI", f_titolo, 30, ROSSO)
+	tg.visible = false
+	v.add_child(tg)
 	lista_giocatori = VBoxContainer.new()
+	lista_giocatori.visible = false
 	lista_giocatori.add_theme_constant_override("separation", 0)
 	v.add_child(lista_giocatori)
 
@@ -236,7 +247,8 @@ func aggiorna_classifica(m: Motore) -> void:
 		r["stato"].text = m._stato_cavallo(c) if c["cella"] != Pista.TRAGUARDO else "ARRIVATO"
 		r["nome"].add_theme_color_override("font_color", SCURO if c["attivo"] else Color("#8a7a6a"))
 	if m.giocatori.size():
-		montepremi.text = "Montepremi: " + m.euro(m.montepremi()) if m.cfg["posta"] > 0 else "Si gioca per la gloria"
+		montepremi.text = "MONTEPREMI " + m.euro(m.montepremi()).to_upper() if m.cfg["posta"] > 0 else "PER LA GLORIA"
+		quota_lbl.text = ("una quota vale " + m.euro(m.quota_euro())) if m.cfg["posta"] > 0 else "contano le quote"
 	else:
 		montepremi.text = ""
 	for c in lista_giocatori.get_children():
@@ -310,23 +322,21 @@ func _crea_giro() -> void:
 	giro_box.add_theme_stylebox_override("panel", stile(Color(1.0, 0.96, 0.84, 0.92), ROSSO, 18, 4))
 	giro_box.anchor_left = 1.0
 	giro_box.anchor_right = 1.0
-	giro_box.anchor_top = 1.0
-	giro_box.anchor_bottom = 1.0
 	giro_box.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	giro_box.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	giro_box.offset_right = -16
-	giro_box.offset_bottom = -16
+	giro_box.offset_top = 128
 	giro_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	giro_box.visible = false
 	add_child(giro_box)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 4)
 	giro_box.add_child(v)
-	var t := etichetta("CHI GIOCA IN QUESTO GIRO", f_titolo, 26, ROSSO)
+	var t := etichetta("CHI GIOCA", f_titolo, 28, ROSSO)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
-	giro_flow = HBoxContainer.new()
-	giro_flow.add_theme_constant_override("separation", 10)
+	giro_flow = GridContainer.new()
+	giro_flow.add_theme_constant_override("h_separation", 8)
+	giro_flow.add_theme_constant_override("v_separation", 6)
 	v.add_child(giro_flow)
 
 func _stile_carta(acceso: bool) -> StyleBoxFlat:
@@ -348,8 +358,13 @@ func aggiorna_giro(m: Motore) -> void:
 			c.queue_free()
 		giro_carte = {}
 		# tutti su una fila: più sono, più piccoli (da 150 a 90 pixel)
-		var spazio := get_viewport_rect().size.x - 360.0 - 60.0
-		var lato := clampf(spazio / maxf(1.0, m.giocatori.size()) - 18.0, 90.0, 150.0)
+		# in colonna sulla destra: una colonna fino a 4 giocatori, poi due
+		var ng := maxi(1, m.giocatori.size())
+		var colonne := 1 if ng <= 4 else 2
+		giro_flow.columns = colonne
+		var righe := int(ceil(float(ng) / colonne))
+		var alto := get_viewport_rect().size.y - 128.0 - 16.0 - 60.0
+		var lato := clampf(alto / righe - 44.0, 70.0, 150.0)
 		for g in m.giocatori:
 			var p := PanelContainer.new()
 			p.add_theme_stylebox_override("panel", _stile_carta(false))
@@ -361,7 +376,7 @@ func aggiorna_giro(m: Motore) -> void:
 			r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			r.custom_minimum_size = Vector2(lato, lato)
 			vv.add_child(r)
-			var n := etichetta(str(g.get("base", g["nome"])), f_testo, int(clampf(lato / 5.0, 18, 26)), SCURO)
+			var n := etichetta(str(g.get("base", g["nome"])), f_testo, int(clampf(lato / 6.0, 17, 26)), SCURO)
 			n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			n.custom_minimum_size = Vector2(lato, 0)
 			n.clip_text = true
@@ -617,8 +632,6 @@ func _posiziona_fumetto() -> void:
 	fumetto.reset_size()
 	var vp := get_viewport_rect().size
 	var fondo := vp.y - 150.0
-	if giro_box and giro_box.visible and giro_box.size.y > 0:
-		fondo = minf(fondo, vp.y - 16.0 - giro_box.size.y - 16.0)
 	fumetto.position = Vector2(300, fondo - fumetto.size.y)
 
 func zitto() -> void:
