@@ -36,7 +36,8 @@ var n_turno := 0
 var salta_prossimo := false
 var in_corsa_dado := false
 var corsa_per_tutti := false   # il "?" chiede la corsa al dado per tutti i giocatori, alla fine del turno
-var cella_interrogativo := -1  # dove sta il "?" che ha chiesto la corsa (torna nel sacchetto dopo la corsa)
+var cella_interrogativo := -1
+var _quasi := {}             # cavalli già annunciati vicino al traguardo  # dove sta il "?" che ha chiesto la corsa (torna nel sacchetto dopo la corsa)
 var giro := []              # chi ha già giocato in questo giro (si ricomincia quando hanno giocato tutti)
 var ultimo_uid := ""
 var di_turno := ""          # uid di chi sta giocando ora
@@ -120,6 +121,7 @@ func prepara_corsa() -> void:
 	salta_prossimo = false
 	ultimo_uid = ""
 	giro = []
+	_quasi = {}
 	corsa_per_tutti = false
 	di_turno = ""
 	dado_attuale = []
@@ -240,12 +242,14 @@ func gioca_turno() -> void:
 			await v.dici(Dati.frase("salta", {"g": nome_g(uid)}), "triste")
 			_log("salta " + uid)
 			return
-		await v.dici(Dati.frase("turno", {"g": nome_g(uid)}), "indica")
+		v.commenta(Dati.frase("turno", {"g": nome_g(uid)}), "indica")
 		await _chiedi([uid], "tira", "Tira il dado!", [{"k": "tira", "t": "TIRA IL DADO", "ok": true}], {"scopo": "tira"})
 		var faccia: Dictionary = Dati.DADO[randi() % Dati.DADO.size()]
 		dado_attuale = [faccia]
 		cambiato.emit()
 		await v.dado([faccia])
+		if faccia["v"]:
+			v.commenta(Dati.frase("verde"), "sorpreso")
 		await esegui_mossa(uid, faccia)
 	while corsa_per_tutti and vincitore < 0:
 		corsa_per_tutti = false
@@ -425,13 +429,16 @@ func muovi(cid: int, da: int, dest: int, d: Dictionary, avanti: bool) -> void:
 	if dest == Pista.TRAGUARDO:
 		return
 	if avanti:
-		if randf() < 0.5:
-			await v.dici(Dati.frase("avanti", {"c": Dati.nome(cid)}), "parla")
 		var ora := _primo()
 		if ora == cid and prima != cid and pista.progresso(dest) > 0:
-			await v.dici(Dati.frase("testa", {"c": Dati.nome(cid)}), "occhiolino")
+			v.commenta(Dati.frase("testa", {"c": Dati.nome(cid)}), "occhiolino")
+		elif pista.progresso(dest) > pista.lunghezza * 0.8 and not _quasi.has(cid):
+			_quasi[cid] = true
+			v.commenta(Dati.frase("quasi", {"c": Dati.nome(cid)}), "sorpreso")
+		else:
+			v.commenta(Dati.frase("avanti", {"c": Dati.nome(cid)}), "parla")
 	else:
-		await v.dici(Dati.frase("indietro", {"c": Dati.nome(cid)}), "sorpreso")
+		v.commenta(Dati.frase("indietro", {"c": Dati.nome(cid)}), "sorpreso")
 
 func _primo() -> int:
 	var best := -1
@@ -528,7 +535,7 @@ func risolvi_casella(uid: String, cid: int, verde: bool, origine: int, prof: int
 	visti[tc] = true
 	_log("token %s %s su %d" % [tipo, "esistente" if esistente else "pescato", tc])
 	await v.token_rivela(tipo, tc, esistente)
-	await v.dici(Dati.TOKEN[tipo]["nome"] + "! " + Dati.TOKEN[tipo]["testo"], "sussurra")
+	await v.dici(Dati.frase_token(tipo) + " " + Dati.TOKEN[tipo]["nome"] + ": " + Dati.TOKEN[tipo]["testo"], "sussurra")
 	var efficace := tipo
 	if not esistente and tipo != "allarme":
 		token[tc] = tipo

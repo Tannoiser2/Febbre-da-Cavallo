@@ -53,7 +53,7 @@ var _pose_tween: Tween
 var titolo_img: TextureRect
 var velocita := 1.0
 var giro_box: PanelContainer        # in basso a destra: i ritratti dei giocatori, chi ha già giocato nel giro
-var giro_flow: HFlowContainer
+var giro_flow: HBoxContainer
 var giro_carte := {}                # uid -> {p, ritratto, nome, timbro}
 var _giro_chiave := ""
 var _tex_ritratti := {}
@@ -74,6 +74,11 @@ func _ready() -> void:
 	theme = th
 	for p in ["base", "busta", "conta1", "conta2", "conta3", "festeggia", "indica", "martello", "occhiolino", "parla", "pensa", "ride", "saluta", "soldi", "sorpreso", "sussurra", "triste"]:
 		pose[p] = load("res://assets/avatar/%s.webp" % p)
+	# pose da ippodromo: si usano solo se ci sono i file (vedi AVATAR_POSE.md)
+	for p in Dati.POSE_IPPODROMO:
+		var f := "res://assets/avatar/%s.webp" % p
+		if ResourceLoader.exists(f):
+			pose[p] = load(f)
 	_crea_titolo()
 	_crea_destra()
 	_crea_banner()
@@ -319,10 +324,8 @@ func _crea_giro() -> void:
 	var t := etichetta("CHI GIOCA IN QUESTO GIRO", f_titolo, 26, ROSSO)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
-	giro_flow = HFlowContainer.new()
-	giro_flow.custom_minimum_size = Vector2(560, 0)
-	giro_flow.add_theme_constant_override("h_separation", 8)
-	giro_flow.add_theme_constant_override("v_separation", 8)
+	giro_flow = HBoxContainer.new()
+	giro_flow.add_theme_constant_override("separation", 10)
 	v.add_child(giro_flow)
 
 func _stile_carta(acceso: bool) -> StyleBoxFlat:
@@ -343,6 +346,9 @@ func aggiorna_giro(m: Motore) -> void:
 		for c in giro_flow.get_children():
 			c.queue_free()
 		giro_carte = {}
+		# tutti su una fila: più sono, più piccoli (da 150 a 90 pixel)
+		var spazio := get_viewport_rect().size.x - 360.0 - 60.0
+		var lato := clampf(spazio / maxf(1.0, m.giocatori.size()) - 18.0, 90.0, 150.0)
 		for g in m.giocatori:
 			var p := PanelContainer.new()
 			p.add_theme_stylebox_override("panel", _stile_carta(false))
@@ -352,16 +358,16 @@ func aggiorna_giro(m: Motore) -> void:
 			var r := TextureRect.new()
 			r.texture = tex_ritratto(g.get("ritratto", ""))
 			r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			r.custom_minimum_size = Vector2(96, 96)
+			r.custom_minimum_size = Vector2(lato, lato)
 			vv.add_child(r)
-			var n := etichetta(str(g.get("base", g["nome"])), f_testo, 20, SCURO)
+			var n := etichetta(str(g.get("base", g["nome"])), f_testo, int(clampf(lato / 5.0, 18, 26)), SCURO)
 			n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			n.custom_minimum_size = Vector2(96, 0)
+			n.custom_minimum_size = Vector2(lato, 0)
 			n.clip_text = true
 			vv.add_child(n)
-			var timbro := etichetta("GIOCATO", f_titolo, 26, Color("#c8202b"), 6, Color.WHITE)
+			var timbro := etichetta("GIOCATO", f_titolo, int(lato / 3.6), Color("#c8202b"), 6, Color.WHITE)
 			timbro.rotation = -0.35
-			timbro.position = Vector2(8, 40)
+			timbro.position = Vector2(lato * 0.08, lato * 0.42)
 			timbro.visible = false
 			p.add_child(timbro)
 			timbro.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -396,11 +402,12 @@ func roulette_ritratti(m: Motore, scelto: String, suono: Callable) -> void:
 	if cand.size() > 1:
 		var i0 := randi() % cand.size()
 		var fine := cand.find(scelto)
-		var passi := 14 + ((fine - i0 - 14) % cand.size() + cand.size()) % cand.size()
+		var giri := 7 if cand.size() > 3 else 5
+		var passi := giri + ((fine - i0 - giri) % cand.size() + cand.size()) % cand.size()
 		for k in passi + 1:
 			_accendi(cand[(i0 + k) % cand.size()])
 			suono.call()
-			await get_tree().create_timer((0.05 + 0.012 * k * k / 4.0) / velocita).timeout
+			await get_tree().create_timer((0.035 + 0.008 * k) / velocita).timeout
 	_accendi(scelto)
 	_in_roulette = false
 	var c: Dictionary = giro_carte.get(scelto, {})
@@ -408,8 +415,8 @@ func roulette_ritratti(m: Motore, scelto: String, suono: Callable) -> void:
 		var p: Control = c["p"]
 		p.pivot_offset = p.size / 2.0
 		var tw := create_tween()
-		tw.tween_property(p, "scale", Vector2(1.25, 1.25), 0.15)
-		tw.tween_property(p, "scale", Vector2.ONE, 0.25)
+		tw.tween_property(p, "scale", Vector2(1.2, 1.2), 0.1)
+		tw.tween_property(p, "scale", Vector2.ONE, 0.15)
 	await mostra_banner("TOCCA A " + m.nome_g(scelto).to_upper())
 
 func accendi_molti(uids: Array) -> void:
@@ -602,7 +609,10 @@ func parla(testo: String, posa: String) -> void:
 func _posiziona_fumetto() -> void:
 	fumetto.reset_size()
 	var vp := get_viewport_rect().size
-	fumetto.position = Vector2(300, vp.y - 150 - fumetto.size.y)
+	var fondo := vp.y - 150.0
+	if giro_box and giro_box.visible and giro_box.size.y > 0:
+		fondo = minf(fondo, vp.y - 16.0 - giro_box.size.y - 16.0)
+	fumetto.position = Vector2(300, fondo - fumetto.size.y)
 
 func zitto() -> void:
 	fumetto.visible = false

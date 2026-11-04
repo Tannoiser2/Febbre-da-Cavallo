@@ -4,6 +4,7 @@ extends RefCounted
 
 func aggiorna() -> void: pass
 func dici(_t: String, _posa := "parla") -> void: pass
+func commenta(_t: String, _posa := "parla") -> void: pass
 func partenza() -> void: pass
 func pila_scelta(_uid: String, _p: int) -> void: pass
 func estrazione(_uid: String) -> void: pass

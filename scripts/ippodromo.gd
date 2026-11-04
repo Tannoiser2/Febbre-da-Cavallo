@@ -418,12 +418,75 @@ func _albero(pos: Vector3, h: float) -> void:
 	stella.position = pos + Vector3(0, 2.7 * h, 0)
 	_mondo_pista.add_child(stella)
 
+## Siepe al centro della pista, con qualche pallina di Natale
+func _siepe() -> void:
+	var m := StandardMaterial3D.new()
+	var noise := FastNoiseLite.new()
+	noise.frequency = 0.08
+	var nt := NoiseTexture2D.new()
+	nt.noise = noise
+	nt.width = 128
+	nt.height = 128
+	nt.seamless = true
+	var g := Gradient.new()
+	g.set_color(0, Color("#173f1c"))
+	g.set_color(1, Color("#3c7a30"))
+	nt.color_ramp = g
+	m.albedo_texture = nt
+	m.uv1_scale = Vector3(6, 2, 1)
+	m.uv1_triplanar = true
+	m.roughness = 1.0
+	var alto := 1.3
+	var r := 1.25
+	var corpo := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(pista.lato, alto, r * 2.0)
+	corpo.mesh = bm
+	corpo.material_override = m
+	corpo.position = Vector3(0, alto / 2.0, 0)
+	_mondo_pista.add_child(corpo)
+	for sx in [-1.0, 1.0]:
+		var testa := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = r
+		cm.bottom_radius = r
+		cm.height = alto
+		cm.radial_segments = 20
+		testa.mesh = cm
+		testa.material_override = m
+		testa.position = Vector3(sx * pista.lato / 2.0, alto / 2.0, 0)
+		_mondo_pista.add_child(testa)
+	var colori := [Color("#d62828"), Color("#ffd23f"), Color("#ffffff")]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	for c in 3:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		var sf := SphereMesh.new()
+		sf.radius = 0.13
+		sf.height = 0.26
+		sf.radial_segments = 8
+		sf.rings = 4
+		mm.mesh = sf
+		var n := int(pista.lato / 2.5)
+		mm.instance_count = n
+		for i in n:
+			var x := rng.randf_range(-pista.lato / 2.0, pista.lato / 2.0)
+			var z := rng.randf_range(-r, r) * 0.9
+			mm.set_instance_transform(i, Transform3D(Basis(), Vector3(x, alto + 0.02, z)))
+		var mi := MultiMeshInstance3D.new()
+		mi.multimesh = mm
+		var mc := StandardMaterial3D.new()
+		mc.albedo_color = colori[c]
+		mc.emission_enabled = true
+		mc.emission = colori[c]
+		mc.emission_energy_multiplier = 0.8
+		mi.material_override = mc
+		_mondo_pista.add_child(mi)
+
 func _alberi(_r_in: float, r_out: float) -> void:
 	# alberi di Natale nel prato interno e ai lati
-	var n := int(pista.lato / 9.0) + 1
-	for i in n:
-		var x := -pista.lato / 2.0 + (i + 0.5) * pista.lato / n
-		_albero(Vector3(x, 0, 0), 1.1)
+	_siepe()
 	for s in [-1.0, 1.0]:
 		_albero(Vector3(s * (pista.lato / 2.0 + r_out + 5.0), 0, -3), 2.0)
 		_albero(Vector3(s * (pista.lato / 2.0 + r_out + 8.0), 0, 4), 1.6)

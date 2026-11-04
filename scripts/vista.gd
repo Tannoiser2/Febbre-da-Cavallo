@@ -26,7 +26,14 @@ func aggiorna() -> void:
 	ip.sincronizza(m)
 	ui.aggiorna_classifica(m)
 
+## Commento che non ferma il gioco: compare il fumetto e parte la voce, ma si va avanti subito
+func commenta(t: String, posa := "parla") -> void:
+	dici(t, posa)
+
 func dici(t: String, posa := "parla") -> void:
+	var varianti: Array = Dati.VARIANTI_POSA.get(posa, [posa]).filter(func(x): return ui.pose.has(x))
+	if varianti.size():
+		posa = varianti[randi() % varianti.size()]
 	ultima_frase = t
 	main.frase_per_telefoni(t)
 	ui.parla(t, posa)
