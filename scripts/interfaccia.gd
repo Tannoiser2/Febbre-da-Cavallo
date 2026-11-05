@@ -26,7 +26,7 @@ var presi_box: HBoxContainer      # corsa al dado: i dadi già presi, con il nom
 var _dadi_ws := []
 var _presi_nome := {}
 var zona_attuale := Rect2()
-const FASCIA_DADI := 250.0   # spazio sotto la pista riservato ai dadi
+const FASCIA_DADI := 0.0   # (niente spazio riservato: la pista resta grande, i dadi stanno in basso)
 var classifica: VBoxContainer
 var righe_cavalli := []
 var lista_giocatori: VBoxContainer
@@ -655,7 +655,11 @@ func zona_dadi(pista_r: Rect2) -> Rect2:
 		x1 = vp.x - ((giro_box.size.x + 32.0) if giro_box.visible else 360.0)
 	else:
 		y1 = vp.y - ((giro_box.size.y + 32.0) if giro_box.visible else 240.0)
+	# sotto la pista se c'è spazio, altrimenti sopra i ritratti / in fondo allo schermo
 	var y0 := clampf(pista_r.end.y + 12.0, 240.0, y1 - 150.0)
+	if y1 - y0 < 200.0:
+		y1 = vp.y - 16.0
+		y0 = y1 - 300.0
 	return Rect2(x0, y0, x1 - x0, y1 - y0)
 
 func mostra_dadi(facce: Array, _suono: Callable, verso := Vector2(-1, -1), zona := Rect2()) -> void:

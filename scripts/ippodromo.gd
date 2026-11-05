@@ -26,7 +26,7 @@ var tex_token := {}
 var _mesh_cavallo: Mesh
 var _zoppi := {}
 var _in_moto := {}
-var zoom_segui := 0.4
+var zoom_segui := 0.62
 var zoom_extra := 1.0
 var aree_libere := []   # rettangoli dello schermo (pixel) liberi dall'interfaccia: la pista si allarga nel migliore
 var spostamento_ui := Vector2(0.0, 0.0)   # quanto spostare la vista per lasciare spazio all'interfaccia
@@ -675,7 +675,8 @@ func anima_mossa(cid: int, perc: Array, da: int, velocita := 1.0) -> void:
 			h.basis = h.basis.slerp(base_obj, minf(1.0, dt * 9.0)).orthonormalized()
 			await get_tree().process_frame
 	h.galoppa(false)
-	_segui = h   # resta inquadrato: la vista generale torna all'inizio del turno dopo
+	# finito il movimento si torna, con calma, alla vista generale
+	get_tree().create_timer(0.7).timeout.connect(func(): if _segui == h: _segui = null)
 	if perc.size() and perc[-1] >= 0:
 		var fin := _base_dir(dir_cella(perc[-1]))
 		for k in 10:
